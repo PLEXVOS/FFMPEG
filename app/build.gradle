@@ -5,12 +5,12 @@ plugins {
 
 android {
     namespace 'com.exe.ffmpeg'
-    compileSdk 33
+    compileSdk 34
 
     defaultConfig {
         applicationId "com.exe.ffmpeg"
         minSdk 26
-        targetSdk 33
+        targetSdk 34
         versionCode 1
         versionName "1.0"
     }
@@ -30,12 +30,12 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_18
-        targetCompatibility JavaVersion.VERSION_18
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
 
     kotlinOptions {
-        jvmTarget = '1.8'
+        jvmTarget = '17'
     }
 
     packaging {
@@ -44,7 +44,6 @@ android {
         }
     }
 
-    // Forza emoji2 1.3.0 in modo compatibile con Termux
     configurations.all {
         resolutionStrategy {
             force 'androidx.emoji2:emoji2:1.3.0'
