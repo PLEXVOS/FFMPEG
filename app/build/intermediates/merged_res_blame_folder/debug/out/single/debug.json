@@ -1,0 +1,62 @@
+[
+    {
+        "merged": "com.exe.ffmpeg.app-merged_res-46:/layout_activity_merge.xml.flat",
+        "source": "com.exe.ffmpeg.app-main-48:/layout/activity_merge.xml"
+    },
+    {
+        "merged": "com.exe.ffmpeg.app-merged_res-46:/layout_activity_convert.xml.flat",
+        "source": "com.exe.ffmpeg.app-main-48:/layout/activity_convert.xml"
+    },
+    {
+        "merged": "com.exe.ffmpeg.app-merged_res-46:/layout_activity_trim_audio.xml.flat",
+        "source": "com.exe.ffmpeg.app-main-48:/layout/activity_trim_audio.xml"
+    },
+    {
+        "merged": "com.exe.ffmpeg.app-merged_res-46:/drawable_bg_folder_card.xml.flat",
+        "source": "com.exe.ffmpeg.app-main-48:/drawable/bg_folder_card.xml"
+    },
+    {
+        "merged": "com.exe.ffmpeg.app-merged_res-46:/drawable_bg_card_item.xml.flat",
+        "source": "com.exe.ffmpeg.app-main-48:/drawable/bg_card_item.xml"
+    },
+    {
+        "merged": "com.exe.ffmpeg.app-merged_res-46:/layout_activity_extract_audio.xml.flat",
+        "source": "com.exe.ffmpeg.app-main-48:/layout/activity_extract_audio.xml"
+    },
+    {
+        "merged": "com.exe.ffmpeg.app-merged_res-46:/layout_activity_split.xml.flat",
+        "source": "com.exe.ffmpeg.app-main-48:/layout/activity_split.xml"
+    },
+    {
+        "merged": "com.exe.ffmpeg.app-merged_res-46:/layout_activity_log.xml.flat",
+        "source": "com.exe.ffmpeg.app-main-48:/layout/activity_log.xml"
+    },
+    {
+        "merged": "com.exe.ffmpeg.app-merged_res-46:/drawable_bg_button_orange.xml.flat",
+        "source": "com.exe.ffmpeg.app-main-48:/drawable/bg_button_orange.xml"
+    },
+    {
+        "merged": "com.exe.ffmpeg.app-merged_res-46:/layout_item_function_card.xml.flat",
+        "source": "com.exe.ffmpeg.app-main-48:/layout/item_function_card.xml"
+    },
+    {
+        "merged": "com.exe.ffmpeg.app-merged_res-46:/drawable_bg_toggle.xml.flat",
+        "source": "com.exe.ffmpeg.app-main-48:/drawable/bg_toggle.xml"
+    },
+    {
+        "merged": "com.exe.ffmpeg.app-merged_res-46:/layout_activity_trim_video.xml.flat",
+        "source": "com.exe.ffmpeg.app-main-48:/layout/activity_trim_video.xml"
+    },
+    {
+        "merged": "com.exe.ffmpeg.app-merged_res-46:/drawable_bg_input_cyan.xml.flat",
+        "source": "com.exe.ffmpeg.app-main-48:/drawable/bg_input_cyan.xml"
+    },
+    {
+        "merged": "com.exe.ffmpeg.app-merged_res-46:/drawable_bg_dial.xml.flat",
+        "source": "com.exe.ffmpeg.app-main-48:/drawable/bg_dial.xml"
+    },
+    {
+        "merged": "com.exe.ffmpeg.app-merged_res-46:/layout_activity_main.xml.flat",
+        "source": "com.exe.ffmpeg.app-main-48:/layout/activity_main.xml"
+    }
+]

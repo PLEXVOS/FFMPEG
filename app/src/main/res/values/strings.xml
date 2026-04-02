@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">FFmpegApp</string>
+    <string-array name="video_formats">
+        <item>.mp4</item>
+        <item>.mkv</item>
+        <item>.avi</item>
+        <item>.mov</item>
+        <item>.webm</item>
+        <item>.flv</item>
+        <item>.ts</item>
+    </string-array>
+    <string-array name="audio_formats">
+        <item>.mp3</item>
+        <item>.aac</item>
+        <item>.flac</item>
+        <item>.wav</item>
+        <item>.ogg</item>
+        <item>.m4a</item>
+        <item>.opus</item>
+    </string-array>
+    <string-array name="all_formats">
+        <item>.mp4</item>
+        <item>.mkv</item>
+        <item>.avi</item>
+        <item>.mov</item>
+        <item>.webm</item>
+        <item>.mp3</item>
+        <item>.aac</item>
+        <item>.flac</item>
+        <item>.wav</item>
+        <item>.ogg</item>
+        <item>.m4a</item>
+    </string-array>
+    <string-array name="split_parts">
+        <item>2</item>
+        <item>3</item>
+        <item>4</item>
+        <item>5</item>
+        <item>6</item>
+        <item>8</item>
+        <item>10</item>
+        <item>Personalizzato</item>
+    </string-array>
+</resources>

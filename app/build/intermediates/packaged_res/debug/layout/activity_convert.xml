@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent" android:background="#0F0F0F">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="vertical" android:padding="16dp">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:background="@drawable/bg_folder_card" android:orientation="vertical" android:padding="16dp">
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:text="CONVERTI" android:textColor="#FF6600" android:textSize="24sp"
+                android:textStyle="bold" android:fontFamily="monospace" android:gravity="center"/>
+            <View android:layout_width="60dp" android:layout_height="2dp" android:background="#FF6600"
+                android:layout_gravity="center" android:layout_marginTop="8dp" android:layout_marginBottom="16dp"/>
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="horizontal" android:gravity="center_vertical">
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_weight="1" android:orientation="vertical">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="Stato" android:textColor="#FF6600" android:textSize="18sp" android:fontFamily="monospace"/>
+                    <TextView android:id="@+id/tvStatus" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="In attesa..." android:textColor="#888888" android:textSize="12sp" android:layout_marginTop="4dp"/>
+                </LinearLayout>
+                <FrameLayout android:layout_width="80dp" android:layout_height="80dp" android:background="@drawable/bg_dial">
+                    <TextView android:id="@+id/tvProgress" android:layout_width="match_parent" android:layout_height="match_parent"
+                        android:gravity="center" android:text="0%" android:textColor="#FF6600"
+                        android:textSize="18sp" android:textStyle="bold" android:fontFamily="monospace"/>
+                </FrameLayout>
+            </LinearLayout>
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="horizontal" android:layout_marginTop="16dp">
+                <TextView android:id="@+id/tvFile1" android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_weight="1" android:background="@drawable/bg_input_cyan" android:padding="10dp"
+                    android:text="Nessun file" android:textColor="#00CCDD" android:textSize="13sp"
+                    android:fontFamily="monospace" android:singleLine="true" android:ellipsize="start"/>
+                <Button android:id="@+id/btnFile1" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="SCEGLI" android:background="@drawable/bg_button_orange"
+                    android:textColor="#FFFFFF" android:textSize="11sp" android:layout_marginStart="8dp" android:paddingHorizontal="12dp"/>
+            </LinearLayout>
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="horizontal" android:layout_marginTop="12dp" android:gravity="center_vertical">
+                <android.widget.EditText android:id="@+id/etRename"
+                    android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                    android:background="@drawable/bg_input_cyan" android:padding="10dp"
+                    android:hint="Rinomina..." android:textColor="#00CCDD" android:textColorHint="#336677"
+                    android:textSize="14sp" android:fontFamily="monospace"/>
+                <FrameLayout android:id="@+id/dialFormat" android:layout_width="80dp" android:layout_height="80dp"
+                    android:layout_marginStart="12dp" android:background="@drawable/bg_dial"
+                    android:clickable="true" android:focusable="true">
+                    <TextView android:id="@+id/tvFormat" android:layout_width="match_parent" android:layout_height="match_parent"
+                        android:gravity="center" android:text=".mp4" android:textColor="#FF6600"
+                        android:textSize="14sp" android:textStyle="bold" android:fontFamily="monospace"/>
+                </FrameLayout>
+            </LinearLayout>
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="PROCESSA" android:textColor="#888888" android:textSize="13sp"
+                android:fontFamily="monospace" android:layout_gravity="center" android:layout_marginTop="16dp"/>
+            <Switch android:id="@+id/switchProcess" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:layout_gravity="center" android:layout_marginTop="8dp"
+                android:textOff="OFF" android:textOn="ON" android:textColor="#FF6600"
+                android:textSize="13sp" android:fontFamily="monospace"/>
+        </LinearLayout>
+        <Button android:id="@+id/btnBack" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="&lt;- INDIETRO" android:background="@drawable/bg_button_orange"
+            android:textColor="#FFFFFF" android:fontFamily="monospace" android:layout_marginTop="16dp"/>
+    </LinearLayout>
+</ScrollView>
