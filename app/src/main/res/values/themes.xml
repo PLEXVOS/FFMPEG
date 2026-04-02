@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.FFmpegApp" parent="Theme.MaterialComponents.NoActionBar">
+    <style name="Theme.FFmpegApp" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="colorPrimary">@color/orange</item>
-        <item name="colorPrimaryVariant">@color/orange_light</item>
+        <item name="colorPrimaryContainer">@color/orange_light</item>
         <item name="colorOnPrimary">@color/white</item>
+
         <item name="android:windowBackground">@color/bg_dark</item>
         <item name="android:statusBarColor">@color/bg_dark</item>
         <item name="android:navigationBarColor">@color/bg_dark</item>
