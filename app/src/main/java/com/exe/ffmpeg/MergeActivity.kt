@@ -61,25 +61,24 @@ class MergeActivity : BaseActivity() {
             return
         }
 
+        val outputDir = File("/storage/emulated/0/FFmpegOutput")
+        if (!outputDir.exists()) outputDir.mkdirs()  // Assicurati che la cartella esista
+
         val outName = Utils.nameWithExt(etRename.text.toString(), selectedFormat, "merged")
-        val outputDir = File("/storage/emulated/0/FFmpegOutput/")
-        if (!outputDir.exists()) outputDir.mkdirs()
         val outFile = File(outputDir, outName)
 
-        // Crea file lista per concat
+        // File di lista concat
         val listFile = File(cacheDir, "concat_list.txt")
         listFile.writeText("file '${f1}'\nfile '${f2}'\n")
 
         val cmd = "-f concat -safe 0 -i \"${listFile.absolutePath}\" -c copy \"${outFile.absolutePath}\""
 
-        // Esegui FFmpeg
         runFFmpeg(cmd, tvProgress, tvStatus, switchProcess) { success ->
             if (success) {
-                Utils.appendLog(this, "Output: ${outFile.absolutePath}", outputDir)
-                Toast.makeText(this, "Merge completato: ${outFile.name}", Toast.LENGTH_LONG).show()
+                Utils.appendLog(outFile.parentFile, "Output creato: ${outFile.absolutePath}")
+                Toast.makeText(this, "Merge completato: ${outFile.absolutePath}", Toast.LENGTH_LONG).show()
             } else {
-                Utils.appendLog(this, "Merge fallito", outputDir)
-                Toast.makeText(this, "Merge fallito", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, "Errore nel merge", Toast.LENGTH_LONG).show()
             }
         }
     }
