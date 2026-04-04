@@ -23,38 +23,47 @@ class ExtractAudioActivity : BaseActivity() {
         tvFormat = findViewById(R.id.tvFormat)
         etRename = findViewById(R.id.etRename)
         switchProcess = findViewById(R.id.switchProcess)
+
         selectedFormat = ".mp3"
 
         findViewById<Button>(R.id.btnFile1).setOnClickListener { pickFile(REQUEST_FILE1) }
         findViewById<Button>(R.id.btnBack).setOnClickListener { finish() }
-        setupFormatDial(findViewById(R.id.dialFormat), tvFormat, resources.getStringArray(R.array.audio_formats))
+
+        setupFormatDial(
+            findViewById(R.id.dialFormat),
+            tvFormat,
+            resources.getStringArray(R.array.audio_formats)
+        )
+
         setupSwitch(switchProcess) { startExtract() }
     }
 
-    override fun onFile1Selected(name: String, path: String?) { tvFile1.text = name }
+    override fun onFile1Selected(name: String, path: String?) {
+        tvFile1.text = name
+    }
 
     private fun startExtract() {
         val f1 = selectedFile1
+
         if (f1 == null) {
             Toast.makeText(this, "Seleziona un file", Toast.LENGTH_SHORT).show()
             switchProcess.isChecked = false
             return
         }
-        val outName = Utils.nameWithExt(etRename.text.toString(), selectedFormat, "audio")
-        val outFile = File(Utils.getOutputDir(), outName)
 
-        // Codec depends on format
-        val codecArg = when (selectedFormat) {
-            ".flac" -> "-vn -acodec flac"
-            ".wav" -> "-vn -acodec pcm_s16le"
-            ".aac" -> "-vn -acodec aac"
-            ".ogg" -> "-vn -acodec libvorbis"
-            ".opus" -> "-vn -acodec libopus"
-            ".m4a" -> "-vn -acodec aac"
-            else -> "-vn -acodec libmp3lame -q:a 2"
-        }
+        val outputDir = File(getExternalFilesDir(null), "output")
+        if (!outputDir.exists()) outputDir.mkdirs()
 
-        val cmd = "-i \"$f1\" $codecArg \"${outFile.absolutePath}\""
+        val outName = Utils.nameWithExt(
+            etRename.text.toString(),
+            selectedFormat,
+            "audio"
+        )
+
+        val outFile = File(outputDir, outName)
+
+        val cmd = "-i \"$f1\" -vn -acodec libmp3lame -q:a 2 \"${outFile.absolutePath}\""
+
         runFFmpeg(cmd, tvProgress, tvStatus, switchProcess) {}
     }
 }
