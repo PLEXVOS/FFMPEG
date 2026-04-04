@@ -15,9 +15,13 @@ object Utils {
     private const val KEY_LOG = "log_content"
 
     fun getOutputDir(): File {
-        val publicDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES)
-        val dir = File(publicDir, "FFmpegOutput")
-        if (!dir.exists()) dir.mkdirs()
+        // Proviamo a forzare la cartella nella root come richiesto
+        val root = Environment.getExternalStorageDirectory()
+        val dir = File(root, "FFmpegOutput")
+        if (!dir.exists()) {
+            val success = dir.mkdirs()
+            Log.d("FFmpegLog", "Creazione cartella dedicata: $success")
+        }
         return dir
     }
 
@@ -29,8 +33,7 @@ object Utils {
                     if (cursor.moveToFirst() && idx >= 0) cursor.getString(idx) else "file_${System.currentTimeMillis()}"
                 } ?: "file"
             }
-            "file" -> File(uri.path ?: "file").name
-            else -> "file"
+            else -> File(uri.path ?: "file").name
         }
     }
 
@@ -40,19 +43,10 @@ object Utils {
         val existing = prefs.getString(KEY_LOG, "") ?: ""
         val updated = "[$ts] $msg\n$existing"
         prefs.edit().putString(KEY_LOG, updated.take(15000)).apply()
-        Log.d("FFmpegLog", msg)
     }
 
-    // Metodo ripristinato per LogActivity
-    fun getLog(context: Context): String {
-        return context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            .getString(KEY_LOG, "Nessun log disponibile.") ?: ""
-    }
-
-    // Metodo ripristinato per LogActivity
-    fun clearLog(context: Context) {
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().remove(KEY_LOG).apply()
-    }
+    fun getLog(context: Context): String = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY_LOG, "") ?: ""
+    fun clearLog(context: Context) = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().remove(KEY_LOG).apply()
 
     fun nameWithExt(name: String, ext: String, fallback: String): String {
         val base = if (name.isBlank()) fallback else name.trim()
