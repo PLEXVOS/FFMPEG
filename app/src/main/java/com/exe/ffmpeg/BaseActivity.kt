@@ -15,6 +15,7 @@ abstract class BaseActivity : AppCompatActivity() {
     protected var selectedFile1: String? = null
     protected var selectedFile2: String? = null
     protected var selectedFormat: String = ".mp4"
+
     protected val REQUEST_FILE1 = 101
     protected val REQUEST_FILE2 = 102
 
@@ -51,31 +52,30 @@ abstract class BaseActivity : AppCompatActivity() {
         }
     }
 
-    protected fun runFFmpeg(
-        cmd: String,
+    // === NUOVA FUNZIONE CONSIGLIATA (usa array di argomenti) ===
+    protected fun runFFmpegWithArgs(
+        args: Array<String>,
         tvProgress: TextView,
         tvStatus: TextView,
         switch: Switch,
         onDone: (Boolean) -> Unit
     ) {
-        updateProgress(tvProgress, tvStatus, 0, "Elaborazione...")
-        Utils.appendLog(this, "CMD: $cmd")
+        updateProgress(tvProgress, tvStatus, 0, "Elaborazione in corso...")
 
-        FFmpegKit.executeAsync(cmd, { session ->
+        val cmdString = args.joinToString(" ")
+        Utils.appendLog(this, "CMD args: $cmdString")
+
+        FFmpegKit.executeWithArgumentsAsync(args, { session ->
             val success = ReturnCode.isSuccess(session.returnCode)
-            val msg = if (success) {
-                "Completato"
-            } else {
-                session.allLogsAsString
-            }
+            val msg = if (success) "Completato con successo" else "Errore: ${session.allLogsAsString}"
 
             Utils.appendLog(this, msg)
 
             runOnUiThread {
-                tvProgress.text = if (success) "100%" else "ERR"
-                tvStatus.text = msg.take(100)
+                tvProgress.text = if (success) "100%" else "ERRORE"
+                tvStatus.text = if (success) "Completato" else msg.take(150)
                 switch.isChecked = false
-                Toast.makeText(this, if (success) "Completato!" else "Errore", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, if (success) "Operazione completata!" else "Errore durante l'elaborazione", Toast.LENGTH_LONG).show()
             }
 
             onDone(success)
@@ -83,21 +83,25 @@ abstract class BaseActivity : AppCompatActivity() {
         }, { log ->
             val line = log.message ?: ""
             if (line.contains("time=")) {
-                runOnUiThread { tvStatus.text = line.take(60) }
+                runOnUiThread { tvStatus.text = line.take(100) }
             }
         }, null)
     }
 
+    // Funzione vecchia mantenuta per compatibilità (opzionale)
+    protected fun runFFmpeg(cmd: String, tvProgress: TextView, tvStatus: TextView, switch: Switch, onDone: (Boolean) -> Unit) {
+        // Per ora la lasciamo, ma ti consiglio di migrare a runFFmpegWithArgs
+        val args = cmd.split(" ").filter { it.isNotBlank() }.toTypedArray()
+        runFFmpegWithArgs(args, tvProgress, tvStatus, switch, onDone)
+    }
+
     private fun copyUriToFile(uri: Uri): String {
         val inputStream = contentResolver.openInputStream(uri)
-        val file = File(getExternalFilesDir(null), "input_${System.currentTimeMillis()}")
-        val outputStream = FileOutputStream(file)
-
-        inputStream?.copyTo(outputStream)
-
+        val file = File(getExternalFilesDir(null), "input_${System.currentTimeMillis()}.tmp")
+        FileOutputStream(file).use { output ->
+            inputStream?.use { input -> input.copyTo(output) }
+        }
         inputStream?.close()
-        outputStream.close()
-
         return file.absolutePath
     }
 
@@ -106,7 +110,6 @@ abstract class BaseActivity : AppCompatActivity() {
 
         if (resultCode == RESULT_OK && data?.data != null) {
             val uri = data.data!!
-
             val realPath = copyUriToFile(uri)
             val name = Utils.getFileNameFromUri(this, uri)
 
