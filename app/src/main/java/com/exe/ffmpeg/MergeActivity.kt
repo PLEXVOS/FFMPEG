@@ -1,8 +1,16 @@
 package com.exe.ffmpeg
 
 import android.os.Bundle
-import android.widget.*
+import android.widget.Button
+import android.widget.EditText
+import android.widget.FrameLayout
+import android.widget.Switch
+import android.widget.TextView
+import android.widget.Toast
 import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class MergeActivity : BaseActivity() {
 
@@ -33,8 +41,7 @@ class MergeActivity : BaseActivity() {
         findViewById<Button>(R.id.btnBack).setOnClickListener { finish() }
 
         setupFormatDial(
-            findViewById(R.id.dialFormat),
-            tvFormat,
+            findViewById(R.id.dialFormat), tvFormat,
             resources.getStringArray(R.array.video_formats)
         )
 
@@ -53,40 +60,41 @@ class MergeActivity : BaseActivity() {
         val f1 = selectedFile1
         val f2 = selectedFile2
 
-        if (f1 == null || f2 == null) {
+        if (f1.isNullOrEmpty() || f2.isNullOrEmpty()) {
             Toast.makeText(this, "Seleziona entrambi i file", Toast.LENGTH_SHORT).show()
             switchProcess.isChecked = false
             return
         }
 
-        val outputDir = File(getExternalFilesDir(null), "output")
+        val outputDir = Utils.getOutputDir()
         if (!outputDir.exists()) outputDir.mkdirs()
 
-        val outName = Utils.nameWithExt(
-            etRename.text.toString(),
-            selectedFormat,
-            "merged"
-        )
-
+        val outName = Utils.nameWithExt(etRename.text.toString(), selectedFormat, "merged")
         val outFile = File(outputDir, outName)
 
-        // 🔥 FIX: concat file robusto
+        // File temporaneo con lista per FFmpeg
         val listFile = File(cacheDir, "concat_list.txt")
+        listFile.writeText("file '${f1}'\nfile '${f2}'\n")
 
-        val safeF1 = f1.replace("'", "\\'")
-        val safeF2 = f2.replace("'", "\\'")
+        val cmd = "-f concat -safe 0 -i \"${listFile.absolutePath}\" -c copy \"${outFile.absolutePath}\""
 
-        listFile.writeText(
-            "file '$safeF1'\nfile '$safeF2'\n"
-        )
-
-        // 🔥 FIX: re-encode invece di copy (più compatibile)
-        val cmd = "-f concat -safe 0 -i \"${listFile.absolutePath}\" -c:v libx264 -c:a aac \"${outFile.absolutePath}\""
+        // Log su file nella cartella di output
+        val logFile = File(outputDir, "merge_log_${timestamp()}.txt")
+        logFile.writeText("CMD: $cmd\n\n")
 
         runFFmpeg(cmd, tvProgress, tvStatus, switchProcess) { success ->
-            if (success) {
-                Utils.appendLog(this, "Output: ${outFile.absolutePath}")
+            val msg = if (success) {
+                "Merge completato: ${outFile.absolutePath}"
+            } else {
+                "Errore durante il merge"
             }
+
+            Utils.appendLog(this, msg)
+            logFile.appendText("$msg\n")
         }
+    }
+
+    private fun timestamp(): String {
+        return SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
     }
 }
