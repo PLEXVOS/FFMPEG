@@ -69,29 +69,26 @@ class MergeActivity : BaseActivity() {
         try {
             listFile.writeText("file '$f1'\nfile '$f2'\n")
         } catch (e: Exception) {
-            Toast.makeText(this, "Errore creazione lista: ${e.message}", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "Errore lista: ${e.message}", Toast.LENGTH_LONG).show()
             switchProcess.isChecked = false
             return
         }
 
-        // Comando con virgolette per gestire spazi nei percorsi
         val cmd = "-f concat -safe 0 -i \"\( {listFile.absolutePath}\" -c copy \" \){outFile.absolutePath}\""
 
-        Utils.appendLog(this, "=== INIZIO MERGE ===")
-        Utils.appendLog(this, "Input 1: $f1")
-        Utils.appendLog(this, "Input 2: $f2")
+        Utils.appendLog(this, "=== MERGE START ===")
+        Utils.appendLog(this, "File1: $f1")
+        Utils.appendLog(this, "File2: $f2")
         Utils.appendLog(this, "Output: ${outFile.absolutePath}")
         Utils.appendLog(this, "CMD: $cmd")
 
-        Toast.makeText(this, "Avvio merge...", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "Avvio unione...", Toast.LENGTH_SHORT).show()
 
         runFFmpeg(cmd, tvProgress, tvStatus, switchProcess) { success ->
             if (success) {
-                Utils.appendLog(this, "Merge completato → ${outFile.absolutePath}")
                 Toast.makeText(this, "Video unito in:\n${outFile.absolutePath}", Toast.LENGTH_LONG).show()
             } else {
-                Utils.appendLog(this, "Merge fallito")
-                Toast.makeText(this, "Merge fallito. Controlla i log nell'app", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, "Merge fallito - controlla log", Toast.LENGTH_LONG).show()
             }
         }
     }
