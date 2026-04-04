@@ -15,12 +15,9 @@ object Utils {
     private const val KEY_LOG = "log_content"
 
     fun getOutputDir(): File {
-        // Su Android 16, scrivere nella Root è bloccato. Usiamo la cartella Movies.
         val publicDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES)
         val dir = File(publicDir, "FFmpegOutput")
-        if (!dir.exists()) {
-            dir.mkdirs()
-        }
+        if (!dir.exists()) dir.mkdirs()
         return dir
     }
 
@@ -42,12 +39,23 @@ object Utils {
         val ts = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
         val existing = prefs.getString(KEY_LOG, "") ?: ""
         val updated = "[$ts] $msg\n$existing"
-        prefs.edit().putString(KEY_LOG, updated.take(10000)).apply()
+        prefs.edit().putString(KEY_LOG, updated.take(15000)).apply()
         Log.d("FFmpegLog", msg)
+    }
+
+    // Metodo ripristinato per LogActivity
+    fun getLog(context: Context): String {
+        return context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getString(KEY_LOG, "Nessun log disponibile.") ?: ""
+    }
+
+    // Metodo ripristinato per LogActivity
+    fun clearLog(context: Context) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().remove(KEY_LOG).apply()
     }
 
     fun nameWithExt(name: String, ext: String, fallback: String): String {
         val base = if (name.isBlank()) fallback else name.trim()
-        return if (base.endsWith(ext)) base else "$base$ext"
+        return if (base.contains('.')) base else "$base$ext"
     }
 }
