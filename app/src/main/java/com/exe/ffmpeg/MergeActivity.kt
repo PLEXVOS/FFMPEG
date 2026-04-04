@@ -3,6 +3,7 @@ package com.exe.ffmpeg
 import android.os.Bundle
 import android.widget.*
 import java.io.File
+import android.widget.Toast
 
 class MergeActivity : BaseActivity() {
 
@@ -32,72 +33,63 @@ class MergeActivity : BaseActivity() {
         findViewById<Button>(R.id.btnFile2).setOnClickListener { pickFile(REQUEST_FILE2) }
         findViewById<Button>(R.id.btnBack).setOnClickListener { finish() }
 
-        setupFormatDial(
-            findViewById(R.id.dialFormat),
-            tvFormat,
-            resources.getStringArray(R.array.video_formats)
-        )
-
+        setupFormatDial(findViewById(R.id.dialFormat), tvFormat, resources.getStringArray(R.array.video_formats))
         setupSwitch(switchProcess) { startMerge() }
     }
 
-    override fun onFile1Selected(name: String, path: String?) {
-        tvFile1.text = name
-    }
-
-    override fun onFile2Selected(name: String, path: String?) {
-        tvFile2.text = name
-    }
+    override fun onFile1Selected(name: String, path: String?) { tvFile1.text = name }
+    override fun onFile2Selected(name: String, path: String?) { tvFile2.text = name }
 
     private fun startMerge() {
-        val f1 = selectedFile1
-        val f2 = selectedFile2
+        Toast.makeText(this, "✅ startMerge() avviata", Toast.LENGTH_SHORT).show()
+        Utils.appendLog(this, "=== startMerge() AVVIATA ===")
 
-        if (f1.isNullOrBlank() || f2.isNullOrBlank()) {
-            Toast.makeText(this, "Seleziona entrambi i file video", Toast.LENGTH_SHORT).show()
-            switchProcess.isChecked = false
-            return
-        }
-
-        val outputDir = Utils.getOutputDir()
-        val outName = Utils.nameWithExt(etRename.text.toString(), selectedFormat, "merged")
-        val outFile = File(outputDir, outName)
-
-        // Crea file lista per concat
-        val listFile = File(cacheDir, "concat_list.txt")
         try {
-            listFile.writeText("file '$f1'\nfile '$f2'\n")
-            Utils.appendLog(this, "Lista concat creata correttamente")
-        } catch (e: Exception) {
-            Toast.makeText(this, "Errore nella creazione della lista: ${e.message}", Toast.LENGTH_LONG).show()
-            switchProcess.isChecked = false
-            return
-        }
+            val f1 = selectedFile1
+            val f2 = selectedFile2
 
-        // Comando come array (sicuro con spazi nei percorsi)
-        val args = arrayOf(
-            "-f", "concat",
-            "-safe", "0",
-            "-i", listFile.absolutePath,
-            "-c", "copy",
-            outFile.absolutePath
-        )
-
-        // Logging utile per debug
-        Utils.appendLog(this, "=== INIZIO MERGE ===")
-        Utils.appendLog(this, "Input 1: $f1")
-        Utils.appendLog(this, "Input 2: $f2")
-        Utils.appendLog(this, "Output: ${outFile.absolutePath}")
-        Utils.appendLog(this, "Lista file: ${listFile.absolutePath}")
-
-        runFFmpegWithArgs(args, tvProgress, tvStatus, switchProcess) { success ->
-            if (success) {
-                Utils.appendLog(this, "Merge completato con successo! File salvato in: ${outFile.absolutePath}")
-                Toast.makeText(this, "Video unito correttamente!\nSalvato in: ${outFile.absolutePath}", Toast.LENGTH_LONG).show()
-            } else {
-                Utils.appendLog(this, "Merge fallito - controlla i log per dettagli")
-                Toast.makeText(this, "Merge fallito. Apri la sezione Log per vedere l'errore", Toast.LENGTH_LONG).show()
+            if (f1.isNullOrBlank() || f2.isNullOrBlank()) {
+                Toast.makeText(this, "❌ Seleziona entrambi i file", Toast.LENGTH_LONG).show()
+                Utils.appendLog(this, "ERRORE: uno o entrambi i file nulli")
+                switchProcess.isChecked = false
+                return
             }
+
+            Toast.makeText(this, "✅ File selezionati OK", Toast.LENGTH_SHORT).show()
+
+            val outputDir = Utils.getOutputDir()
+            val outName = Utils.nameWithExt(etRename.text.toString(), selectedFormat, "merged")
+            val outFile = File(outputDir, outName)
+
+            val listFile = File(cacheDir, "concat_list.txt")
+            listFile.writeText("file '$f1'\nfile '$f2'\n")
+
+            Toast.makeText(this, "✅ Lista concat creata", Toast.LENGTH_SHORT).show()
+            Utils.appendLog(this, "Lista concat: ${listFile.absolutePath}")
+            Utils.appendLog(this, "Output sarà: ${outFile.absolutePath}")
+
+            // Comando come array (il più sicuro possibile)
+            val args = arrayOf(
+                "-f", "concat",
+                "-safe", "0",
+                "-i", listFile.absolutePath,
+                "-c", "copy",
+                outFile.absolutePath
+            )
+
+            Utils.appendLog(this, "CMD args pronto → ${args.joinToString(" ")}")
+
+            Toast.makeText(this, "🚀 Avvio FFmpeg...", Toast.LENGTH_SHORT).show()
+
+            runFFmpegWithArgs(args, tvProgress, tvStatus, switchProcess) { success ->
+                Toast.makeText(this, if (success) "✅ MERGE COMPLETATO" else "❌ MERGE FALLITO", Toast.LENGTH_LONG).show()
+                Utils.appendLog(this, if (success) "SUCCESSO" else "FALLITO")
+            }
+
+        } catch (e: Exception) {
+            Toast.makeText(this, "💥 ECCEZIONE: ${e.message}", Toast.LENGTH_LONG).show()
+            Utils.appendLog(this, "ECCEZIONE CATTURATA: \( {e.message}\n \){e.stackTraceToString().take(500)}")
+            switchProcess.isChecked = false
         }
     }
 }
