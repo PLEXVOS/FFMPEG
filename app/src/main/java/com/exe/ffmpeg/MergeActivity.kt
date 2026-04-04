@@ -61,14 +61,12 @@ class MergeActivity : BaseActivity() {
             return
         }
 
-        // Nome e percorso output nella cartella accessibile
-        val outDir = File("/storage/emulated/0/FFmpegOutput")
-        if (!outDir.exists()) outDir.mkdirs()
-
         val outName = Utils.nameWithExt(etRename.text.toString(), selectedFormat, "merged")
-        val outFile = File(outDir, outName)
+        val outputDir = File("/storage/emulated/0/FFmpegOutput/")
+        if (!outputDir.exists()) outputDir.mkdirs()
+        val outFile = File(outputDir, outName)
 
-        // File temporaneo per concat list
+        // Crea file lista per concat
         val listFile = File(cacheDir, "concat_list.txt")
         listFile.writeText("file '${f1}'\nfile '${f2}'\n")
 
@@ -77,14 +75,12 @@ class MergeActivity : BaseActivity() {
         // Esegui FFmpeg
         runFFmpeg(cmd, tvProgress, tvStatus, switchProcess) { success ->
             if (success) {
-                Utils.appendLog(outDir, "Output: ${outFile.absolutePath}")
-                Toast.makeText(this, "Merge completato: ${outFile.absolutePath}", Toast.LENGTH_LONG).show()
+                Utils.appendLog(this, "Output: ${outFile.absolutePath}", outputDir)
+                Toast.makeText(this, "Merge completato: ${outFile.name}", Toast.LENGTH_LONG).show()
             } else {
-                Utils.appendLog(outDir, "Merge fallito")
+                Utils.appendLog(this, "Merge fallito", outputDir)
+                Toast.makeText(this, "Merge fallito", Toast.LENGTH_LONG).show()
             }
-
-            // Pulizia temporanei
-            listFile.delete()
         }
     }
 }
