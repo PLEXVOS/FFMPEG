@@ -3,10 +3,7 @@ package com.exe.ffmpeg
 import android.app.AlertDialog
 import android.content.Intent
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
-import android.os.Environment
-import android.provider.Settings
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import com.arthenica.ffmpegkit.FFmpegKit
@@ -15,33 +12,39 @@ import java.io.File
 import java.io.FileOutputStream
 
 abstract class BaseActivity : AppCompatActivity() {
+
     protected var selectedFile1: String? = null
     protected var selectedFile2: String? = null
     protected var selectedFormat: String = ".mp4"
     protected val REQUEST_FILE1 = 101
     protected val REQUEST_FILE2 = 102
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        checkStoragePermissions()
+    // CHIAVE: salva i path selezionati attraverso i lifecycle events
+    companion object {
+        private const val KEY_FILE1 = "key_selected_file1"
+        private const val KEY_FILE2 = "key_selected_file2"
+        private const val KEY_FORMAT = "key_selected_format"
     }
 
-    private fun checkStoragePermissions() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            if (!Environment.isExternalStorageManager()) {
-                try {
-                    val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
-                    intent.data = Uri.parse("package:$packageName")
-                    startActivity(intent)
-                } catch (e: Exception) {
-                    val intent = Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
-                    startActivity(intent)
-                }
-            }
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        // RIMOSSO: checkStoragePermissions() - lo gestisce solo MainActivity
+        // AGGIUNTO: ripristino dei file selezionati dopo ricreazione Activity
+        if (savedInstanceState != null) {
+            selectedFile1 = savedInstanceState.getString(KEY_FILE1)
+            selectedFile2 = savedInstanceState.getString(KEY_FILE2)
+            selectedFormat = savedInstanceState.getString(KEY_FORMAT, ".mp4") ?: ".mp4"
         }
     }
 
-    // Metodo mancante ripristinato
+    // AGGIUNTO: salva i file selezionati prima che Android distrugga l'Activity
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putString(KEY_FILE1, selectedFile1)
+        outState.putString(KEY_FILE2, selectedFile2)
+        outState.putString(KEY_FORMAT, selectedFormat)
+    }
+
     protected fun setupFormatDial(dialFormat: FrameLayout, tvFormat: TextView, formats: Array<String>) {
         dialFormat.setOnClickListener {
             AlertDialog.Builder(this)
@@ -54,7 +57,6 @@ abstract class BaseActivity : AppCompatActivity() {
         }
     }
 
-    // Metodo mancante ripristinato
     protected fun setupSwitch(switch: Switch, onStart: () -> Unit) {
         switch.setOnCheckedChangeListener { _, isChecked ->
             if (isChecked) onStart()
@@ -69,7 +71,13 @@ abstract class BaseActivity : AppCompatActivity() {
         startActivityForResult(Intent.createChooser(intent, "Seleziona File"), requestCode)
     }
 
-    protected fun runFFmpeg(cmd: String, tvProgress: TextView, tvStatus: TextView, switch: Switch, onDone: (Boolean) -> Unit) {
+    protected fun runFFmpeg(
+        cmd: String,
+        tvProgress: TextView,
+        tvStatus: TextView,
+        switch: Switch,
+        onDone: (Boolean) -> Unit
+    ) {
         runOnUiThread {
             tvProgress.text = "0%"
             tvStatus.text = "In corso..."
@@ -77,16 +85,18 @@ abstract class BaseActivity : AppCompatActivity() {
 
         FFmpegKit.executeAsync(cmd, { session ->
             val success = ReturnCode.isSuccess(session.returnCode)
-            val logs = session.allLogsAsString.take(500)
-            
+            val logs = session.allLogsAsString?.take(500) ?: "nessun log"
             Utils.appendLog(this, if (success) "SUCCESS" else "ERROR: $logs")
 
             runOnUiThread {
                 switch.isChecked = false
                 tvProgress.text = if (success) "100%" else "ERRORE"
-                tvStatus.text = if (success) "Terminato" else "Fallito"
+                tvStatus.text = if (success) "Terminato" else "Fallito: controlla LOG"
             }
-            onDone(success)
+
+            // FIX: onDone chiamata sul main thread per evitare crash su view
+            runOnUiThread { onDone(success) }
+
         }, { log ->
             if (log.message.contains("time=")) {
                 runOnUiThread { tvStatus.text = "Elaborazione in corso..." }
@@ -94,23 +104,32 @@ abstract class BaseActivity : AppCompatActivity() {
         }, null)
     }
 
-    private fun copyUriToInternal(uri: Uri): String {
-        val file = File(cacheDir, "input_${System.currentTimeMillis()}.tmp")
-        contentResolver.openInputStream(uri)?.use { input ->
-            FileOutputStream(file).use { output -> input.copyTo(output) }
+    private fun copyUriToInternal(uri: Uri): String? {
+        return try {
+            val file = File(cacheDir, "input_${System.currentTimeMillis()}.tmp")
+            contentResolver.openInputStream(uri)?.use { input ->
+                FileOutputStream(file).use { output -> input.copyTo(output) }
+            }
+            file.absolutePath
+        } catch (e: Exception) {
+            Utils.appendLog(this, "copyUriToInternal ERROR: ${e.message}")
+            null
         }
-        return file.absolutePath
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (resultCode == RESULT_OK && data?.data != null) {
             val path = copyUriToInternal(data.data!!)
+            if (path == null) {
+                Toast.makeText(this, "Errore lettura file", Toast.LENGTH_SHORT).show()
+                return
+            }
             val name = Utils.getFileNameFromUri(this, data.data!!)
             if (requestCode == REQUEST_FILE1) {
                 selectedFile1 = path
                 onFile1Selected(name, path)
-            } else {
+            } else if (requestCode == REQUEST_FILE2) {
                 selectedFile2 = path
                 onFile2Selected(name, path)
             }
