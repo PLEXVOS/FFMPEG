@@ -28,14 +28,16 @@ class MergeActivity : BaseActivity() {
         findViewById<Button>(R.id.btnFile2).setOnClickListener { pickFile(REQUEST_FILE2) }
         findViewById<Button>(R.id.btnBack).setOnClickListener { finish() }
 
+        // Usiamo direttamente il metodo della BaseActivity senza ridefinirlo
         setupSwitch(switchProcess) { startMerge() }
     }
 
-    override fun onFile1Selected(name: String, path: String?) { tvFile1.text = name }
-    override fun onFile2Selected(name: String, path: String?) { tvFile2.text = name }
+    override fun onFile1Selected(name: String, path: String?) { 
+        tvFile1.text = name 
+    }
 
-    private fun setupSwitch(sw: Switch, action: () -> Unit) {
-        sw.setOnCheckedChangeListener { _, isChecked -> if (isChecked) action() }
+    override fun onFile2Selected(name: String, path: String?) { 
+        tvFile2.text = name 
     }
 
     private fun startMerge() {
@@ -43,7 +45,7 @@ class MergeActivity : BaseActivity() {
         val f2 = selectedFile2
 
         if (f1 == null || f2 == null) {
-            Toast.makeText(this, "Seleziona i file", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Seleziona entrambi i file", Toast.LENGTH_SHORT).show()
             switchProcess.isChecked = false
             return
         }
@@ -52,22 +54,30 @@ class MergeActivity : BaseActivity() {
         val outName = Utils.nameWithExt(etRename.text.toString(), ".mp4", "merged_${System.currentTimeMillis()}")
         val outFile = File(outputDir, outName)
 
-        // Creazione lista per FFmpeg con formattazione rigorosa
+        // Creazione lista per FFmpeg
         val listFile = File(cacheDir, "list.txt")
-        listFile.writeText("file '$f1'\nfile '$f2'")
+        try {
+            listFile.writeText("file '$f1'\nfile '$f2'")
+        } catch (e: Exception) {
+            Utils.appendLog(this, "Errore scrittura lista: ${e.message}")
+            switchProcess.isChecked = false
+            return
+        }
 
-        // Comando: -y (sovrascrivi), -safe 0 (percorsi assoluti), -c copy (veloce)
-        val cmd = "-y -f concat -safe 0 -i ${listFile.absolutePath} -c copy ${outFile.absolutePath}"
+        val cmd = "-y -f concat -safe 0 -i \"${listFile.absolutePath}\" -c copy \"${outFile.absolutePath}\""
 
-        Utils.appendLog(this, "Esecuzione: $cmd")
+        Utils.appendLog(this, "Esecuzione Merge: $cmd")
 
         runFFmpeg(cmd, tvProgress, tvStatus, switchProcess) { success ->
             if (success) {
-                // Rende il file visibile subito in memoria utente
                 MediaScannerConnection.scanFile(this, arrayOf(outFile.absolutePath), null, null)
-                Toast.makeText(this, "Successo! Salvato in Movies/FFmpegOutput", Toast.LENGTH_LONG).show()
+                runOnUiThread {
+                    Toast.makeText(this, "Successo! Salvato in Movies/FFmpegOutput", Toast.LENGTH_LONG).show()
+                }
             } else {
-                Toast.makeText(this, "Errore durante l'unione", Toast.LENGTH_LONG).show()
+                runOnUiThread {
+                    Toast.makeText(this, "Errore durante l'unione - Controlla i log", Toast.LENGTH_LONG).show()
+                }
             }
         }
     }
