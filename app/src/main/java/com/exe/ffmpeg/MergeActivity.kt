@@ -32,7 +32,12 @@ class MergeActivity : BaseActivity() {
         findViewById<Button>(R.id.btnFile2).setOnClickListener { pickFile(REQUEST_FILE2) }
         findViewById<Button>(R.id.btnBack).setOnClickListener { finish() }
 
-        setupFormatDial(findViewById(R.id.dialFormat), tvFormat, resources.getStringArray(R.array.video_formats))
+        setupFormatDial(
+            findViewById(R.id.dialFormat),
+            tvFormat,
+            resources.getStringArray(R.array.video_formats)
+        )
+
         setupSwitch(switchProcess) { startMerge() }
     }
 
@@ -48,55 +53,50 @@ class MergeActivity : BaseActivity() {
         val f1 = selectedFile1
         val f2 = selectedFile2
 
-        if (f1 == null || f2 == null) {
-            Toast.makeText(this, "Seleziona entrambi i file", Toast.LENGTH_SHORT).show()
+        if (f1.isNullOrBlank() || f2.isNullOrBlank()) {
+            Toast.makeText(this, "Seleziona entrambi i file video", Toast.LENGTH_SHORT).show()
             switchProcess.isChecked = false
             return
         }
 
+        val outputDir = Utils.getOutputDir()
         val outName = Utils.nameWithExt(etRename.text.toString(), selectedFormat, "merged")
-        val outputDir = File("/storage/emulated/0/FFmpegOutput")
-        if (!outputDir.exists()) outputDir.mkdirs()
         val outFile = File(outputDir, outName)
 
+        // Crea file lista per concat
         val listFile = File(cacheDir, "concat_list.txt")
         try {
-            listFile.writeText("file '${f1.absolutePath}'\nfile '${f2.absolutePath}'\n")
+            listFile.writeText("file '$f1'\nfile '$f2'\n")
+            Utils.appendLog(this, "Lista concat creata correttamente")
         } catch (e: Exception) {
-            Toast.makeText(this, "Errore scrittura lista file: ${e.message}", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "Errore nella creazione della lista: ${e.message}", Toast.LENGTH_LONG).show()
             switchProcess.isChecked = false
             return
         }
 
-        // Verifica percorsi
-        if (!f1.exists() || !f2.exists()) {
-            Toast.makeText(this, "Uno dei file selezionati non esiste", Toast.LENGTH_LONG).show()
-            switchProcess.isChecked = false
-            return
-        }
+        // Comando come array (sicuro con spazi nei percorsi)
+        val args = arrayOf(
+            "-f", "concat",
+            "-safe", "0",
+            "-i", listFile.absolutePath,
+            "-c", "copy",
+            outFile.absolutePath
+        )
 
-        if (!listFile.exists() || !outputDir.exists()) {
-            Toast.makeText(this, "Errore di accesso directory cache o output", Toast.LENGTH_LONG).show()
-            switchProcess.isChecked = false
-            return
-        }
+        // Logging utile per debug
+        Utils.appendLog(this, "=== INIZIO MERGE ===")
+        Utils.appendLog(this, "Input 1: $f1")
+        Utils.appendLog(this, "Input 2: $f2")
+        Utils.appendLog(this, "Output: ${outFile.absolutePath}")
+        Utils.appendLog(this, "Lista file: ${listFile.absolutePath}")
 
-        val cmd = "-f concat -safe 0 -i \"${listFile.absolutePath}\" -c copy \"${outFile.absolutePath}\""
-
-        // Controllo finale prima di eseguire
-        if (cmd.contains("  ") || cmd.contains("\n")) {
-            Toast.makeText(this, "Comando FFmpeg contiene errori di formattazione", Toast.LENGTH_LONG).show()
-            switchProcess.isChecked = false
-            return
-        }
-
-        runFFmpeg(cmd, tvProgress, tvStatus, switchProcess) { success ->
+        runFFmpegWithArgs(args, tvProgress, tvStatus, switchProcess) { success ->
             if (success) {
-                Utils.appendLog(this, "Output creato: ${outFile.absolutePath}")
-                Toast.makeText(this, "File unito creato in: ${outFile.absolutePath}", Toast.LENGTH_LONG).show()
+                Utils.appendLog(this, "Merge completato con successo! File salvato in: ${outFile.absolutePath}")
+                Toast.makeText(this, "Video unito correttamente!\nSalvato in: ${outFile.absolutePath}", Toast.LENGTH_LONG).show()
             } else {
-                Utils.appendLog(this, "Errore durante il merge")
-                Toast.makeText(this, "Errore durante il merge, controlla il log", Toast.LENGTH_LONG).show()
+                Utils.appendLog(this, "Merge fallito - controlla i log per dettagli")
+                Toast.makeText(this, "Merge fallito. Apri la sezione Log per vedere l'errore", Toast.LENGTH_LONG).show()
             }
         }
     }
