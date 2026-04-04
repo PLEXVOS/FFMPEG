@@ -1,11 +1,7 @@
 package com.exe.ffmpeg
 
 import android.os.Bundle
-import android.widget.Button
-import android.widget.EditText
-import android.widget.Switch
-import android.widget.TextView
-import android.widget.Toast
+import android.widget.*
 import java.io.File
 
 class MergeActivity : BaseActivity() {
@@ -36,12 +32,7 @@ class MergeActivity : BaseActivity() {
         findViewById<Button>(R.id.btnFile2).setOnClickListener { pickFile(REQUEST_FILE2) }
         findViewById<Button>(R.id.btnBack).setOnClickListener { finish() }
 
-        setupFormatDial(
-            findViewById(R.id.dialFormat),
-            tvFormat,
-            resources.getStringArray(R.array.video_formats)
-        )
-
+        setupFormatDial(findViewById(R.id.dialFormat), tvFormat, resources.getStringArray(R.array.video_formats))
         setupSwitch(switchProcess) { startMerge() }
     }
 
@@ -56,32 +47,56 @@ class MergeActivity : BaseActivity() {
     private fun startMerge() {
         val f1 = selectedFile1
         val f2 = selectedFile2
+
         if (f1 == null || f2 == null) {
             Toast.makeText(this, "Seleziona entrambi i file", Toast.LENGTH_SHORT).show()
             switchProcess.isChecked = false
             return
         }
 
-        // Crea la cartella di output accessibile
-        val outputDir = File("/storage/emulated/0/FFmpegOutput/")
-        if (!outputDir.exists()) outputDir.mkdirs()
-
         val outName = Utils.nameWithExt(etRename.text.toString(), selectedFormat, "merged")
+        val outputDir = File("/storage/emulated/0/FFmpegOutput")
+        if (!outputDir.exists()) outputDir.mkdirs()
         val outFile = File(outputDir, outName)
 
-        // Crea il file di lista per concat
         val listFile = File(cacheDir, "concat_list.txt")
-        listFile.writeText("file '${f1}'\nfile '${f2}'\n")
+        try {
+            listFile.writeText("file '${f1.absolutePath}'\nfile '${f2.absolutePath}'\n")
+        } catch (e: Exception) {
+            Toast.makeText(this, "Errore scrittura lista file: ${e.message}", Toast.LENGTH_LONG).show()
+            switchProcess.isChecked = false
+            return
+        }
+
+        // Verifica percorsi
+        if (!f1.exists() || !f2.exists()) {
+            Toast.makeText(this, "Uno dei file selezionati non esiste", Toast.LENGTH_LONG).show()
+            switchProcess.isChecked = false
+            return
+        }
+
+        if (!listFile.exists() || !outputDir.exists()) {
+            Toast.makeText(this, "Errore di accesso directory cache o output", Toast.LENGTH_LONG).show()
+            switchProcess.isChecked = false
+            return
+        }
 
         val cmd = "-f concat -safe 0 -i \"${listFile.absolutePath}\" -c copy \"${outFile.absolutePath}\""
 
-        // runFFmpeg prende Context corretto e File per output
+        // Controllo finale prima di eseguire
+        if (cmd.contains("  ") || cmd.contains("\n")) {
+            Toast.makeText(this, "Comando FFmpeg contiene errori di formattazione", Toast.LENGTH_LONG).show()
+            switchProcess.isChecked = false
+            return
+        }
+
         runFFmpeg(cmd, tvProgress, tvStatus, switchProcess) { success ->
             if (success) {
-                Utils.appendLog(this, "Output: ${outFile.absolutePath}")
-                Toast.makeText(this, "Video unito in: ${outFile.absolutePath}", Toast.LENGTH_LONG).show()
+                Utils.appendLog(this, "Output creato: ${outFile.absolutePath}")
+                Toast.makeText(this, "File unito creato in: ${outFile.absolutePath}", Toast.LENGTH_LONG).show()
             } else {
-                Utils.appendLog(this, "Merge fallito")
+                Utils.appendLog(this, "Errore durante il merge")
+                Toast.makeText(this, "Errore durante il merge, controlla il log", Toast.LENGTH_LONG).show()
             }
         }
     }
