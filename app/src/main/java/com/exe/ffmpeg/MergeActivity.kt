@@ -69,7 +69,7 @@ class MergeActivity : BaseActivity() {
         try {
             listFile.writeText("file '$f1'\nfile '$f2'\n")
         } catch (e: Exception) {
-            Toast.makeText(this, "Errore lista: ${e.message}", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "Errore creazione lista: ${e.message}", Toast.LENGTH_LONG).show()
             switchProcess.isChecked = false
             return
         }
@@ -82,13 +82,15 @@ class MergeActivity : BaseActivity() {
         Utils.appendLog(this, "Output: ${outFile.absolutePath}")
         Utils.appendLog(this, "CMD: $cmd")
 
-        Toast.makeText(this, "Avvio unione...", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "Avvio unione video...", Toast.LENGTH_SHORT).show()
 
         runFFmpeg(cmd, tvProgress, tvStatus, switchProcess) { success ->
             if (success) {
-                Toast.makeText(this, "Video unito in:\n${outFile.absolutePath}", Toast.LENGTH_LONG).show()
+                Utils.appendLog(this, "Merge completato → ${outFile.absolutePath}")
+                Toast.makeText(this, "Video unito con successo!", Toast.LENGTH_LONG).show()
             } else {
-                Toast.makeText(this, "Merge fallito - controlla log", Toast.LENGTH_LONG).show()
+                Utils.appendLog(this, "Merge fallito")
+                Toast.makeText(this, "Merge fallito - controlla i log", Toast.LENGTH_LONG).show()
             }
         }
     }
