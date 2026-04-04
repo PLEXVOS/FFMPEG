@@ -37,7 +37,8 @@ class MergeActivity : BaseActivity() {
         findViewById<Button>(R.id.btnBack).setOnClickListener { finish() }
 
         setupFormatDial(
-            findViewById(R.id.dialFormat), tvFormat,
+            findViewById(R.id.dialFormat),
+            tvFormat,
             resources.getStringArray(R.array.video_formats)
         )
 
@@ -61,24 +62,26 @@ class MergeActivity : BaseActivity() {
             return
         }
 
-        val outputDir = File("/storage/emulated/0/FFmpegOutput")
-        if (!outputDir.exists()) outputDir.mkdirs()  // Assicurati che la cartella esista
+        // Crea la cartella di output accessibile
+        val outputDir = File("/storage/emulated/0/FFmpegOutput/")
+        if (!outputDir.exists()) outputDir.mkdirs()
 
         val outName = Utils.nameWithExt(etRename.text.toString(), selectedFormat, "merged")
         val outFile = File(outputDir, outName)
 
-        // File di lista concat
+        // Crea il file di lista per concat
         val listFile = File(cacheDir, "concat_list.txt")
         listFile.writeText("file '${f1}'\nfile '${f2}'\n")
 
         val cmd = "-f concat -safe 0 -i \"${listFile.absolutePath}\" -c copy \"${outFile.absolutePath}\""
 
+        // runFFmpeg prende Context corretto e File per output
         runFFmpeg(cmd, tvProgress, tvStatus, switchProcess) { success ->
             if (success) {
-                Utils.appendLog(outFile.parentFile, "Output creato: ${outFile.absolutePath}")
-                Toast.makeText(this, "Merge completato: ${outFile.absolutePath}", Toast.LENGTH_LONG).show()
+                Utils.appendLog(this, "Output: ${outFile.absolutePath}")
+                Toast.makeText(this, "Video unito in: ${outFile.absolutePath}", Toast.LENGTH_LONG).show()
             } else {
-                Toast.makeText(this, "Errore nel merge", Toast.LENGTH_LONG).show()
+                Utils.appendLog(this, "Merge fallito")
             }
         }
     }
