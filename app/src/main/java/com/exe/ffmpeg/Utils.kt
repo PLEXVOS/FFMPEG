@@ -1,8 +1,8 @@
 package com.exe.ffmpeg
 
 import android.content.Context
-import android.content.SharedPreferences
 import android.net.Uri
+import android.os.Environment
 import android.provider.OpenableColumns
 import android.util.Log
 import java.io.File
@@ -11,13 +11,16 @@ import java.util.Date
 import java.util.Locale
 
 object Utils {
-
     private const val PREFS = "ffmpeg_log"
     private const val KEY_LOG = "log_content"
 
     fun getOutputDir(): File {
-        val dir = File(android.os.Environment.getExternalStorageDirectory(), "FFmpegOutput")
-        if (!dir.exists()) dir.mkdirs()
+        // Su Android 16, scrivere nella Root è bloccato. Usiamo la cartella Movies.
+        val publicDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES)
+        val dir = File(publicDir, "FFmpegOutput")
+        if (!dir.exists()) {
+            dir.mkdirs()
+        }
         return dir
     }
 
@@ -26,7 +29,7 @@ object Utils {
             "content" -> {
                 context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
                     val idx = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-                    if (cursor.moveToFirst() && idx >= 0) cursor.getString(idx) else "file"
+                    if (cursor.moveToFirst() && idx >= 0) cursor.getString(idx) else "file_${System.currentTimeMillis()}"
                 } ?: "file"
             }
             "file" -> File(uri.path ?: "file").name
@@ -35,29 +38,16 @@ object Utils {
     }
 
     fun appendLog(context: Context, msg: String) {
-        try {
-            val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            val ts = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
-            val existing = prefs.getString(KEY_LOG, "") ?: ""
-            val updated = "[$ts] $msg\n$existing"
-            prefs.edit().putString(KEY_LOG, updated.take(20000)).apply()
-            Log.d("FFmpegLog", msg)   // fallback visibile in logcat se possibile
-        } catch (e: Exception) {
-            Log.e("FFmpegLog", "appendLog error: ${e.message}")
-        }
-    }
-
-    fun getLog(context: Context): String {
-        return context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            .getString(KEY_LOG, "Nessun log disponibile.") ?: ""
-    }
-
-    fun clearLog(context: Context) {
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().remove(KEY_LOG).apply()
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val ts = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
+        val existing = prefs.getString(KEY_LOG, "") ?: ""
+        val updated = "[$ts] $msg\n$existing"
+        prefs.edit().putString(KEY_LOG, updated.take(10000)).apply()
+        Log.d("FFmpegLog", msg)
     }
 
     fun nameWithExt(name: String, ext: String, fallback: String): String {
         val base = if (name.isBlank()) fallback else name.trim()
-        return if (base.contains('.')) base else "$base$ext"
+        return if (base.endsWith(ext)) base else "$base$ext"
     }
 }
