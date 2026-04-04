@@ -21,7 +21,19 @@ object Utils {
         return dir
     }
 
-    // === VERSIONE SUPER ROBUSTA DEL LOG ===
+    fun getFileNameFromUri(context: Context, uri: Uri): String {
+        return when (uri.scheme) {
+            "content" -> {
+                context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+                    val idx = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                    if (cursor.moveToFirst() && idx >= 0) cursor.getString(idx) else "file"
+                } ?: "file"
+            }
+            "file" -> File(uri.path ?: "file").name
+            else -> "file"
+        }
+    }
+
     fun appendLog(context: Context, msg: String) {
         try {
             val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -29,9 +41,9 @@ object Utils {
             val existing = prefs.getString(KEY_LOG, "") ?: ""
             val updated = "[$ts] $msg\n$existing"
             prefs.edit().putString(KEY_LOG, updated.take(20000)).apply()
+            Log.d("FFmpegLog", msg)   // fallback visibile in logcat se possibile
         } catch (e: Exception) {
-            // Fallback su Logcat (lo vedi con Android Studio / Logcat)
-            Log.e("FFmpegDebug", "appendLog fallito: $msg | Errore: ${e.message}")
+            Log.e("FFmpegLog", "appendLog error: ${e.message}")
         }
     }
 
@@ -44,8 +56,8 @@ object Utils {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().remove(KEY_LOG).apply()
     }
 
-    // le altre funzioni rimangono uguali...
-    fun getFileNameFromUri(context: Context, uri: Uri): String { ... } // copia le tue
-    fun getRealPath(context: Context, uri: Uri): String? { ... }
-    fun nameWithExt(name: String, ext: String, fallback: String): String { ... }
+    fun nameWithExt(name: String, ext: String, fallback: String): String {
+        val base = if (name.isBlank()) fallback else name.trim()
+        return if (base.contains('.')) base else "$base$ext"
+    }
 }
