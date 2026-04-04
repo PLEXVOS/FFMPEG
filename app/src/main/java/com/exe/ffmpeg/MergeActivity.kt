@@ -1,12 +1,7 @@
 package com.exe.ffmpeg
 
 import android.os.Bundle
-import android.widget.Button
-import android.widget.EditText
-import android.widget.FrameLayout
-import android.widget.Switch
-import android.widget.TextView
-import android.widget.Toast
+import android.widget.*
 import java.io.File
 
 class MergeActivity : BaseActivity() {
@@ -38,7 +33,8 @@ class MergeActivity : BaseActivity() {
         findViewById<Button>(R.id.btnBack).setOnClickListener { finish() }
 
         setupFormatDial(
-            findViewById(R.id.dialFormat), tvFormat,
+            findViewById(R.id.dialFormat),
+            tvFormat,
             resources.getStringArray(R.array.video_formats)
         )
 
@@ -56,22 +52,41 @@ class MergeActivity : BaseActivity() {
     private fun startMerge() {
         val f1 = selectedFile1
         val f2 = selectedFile2
+
         if (f1 == null || f2 == null) {
             Toast.makeText(this, "Seleziona entrambi i file", Toast.LENGTH_SHORT).show()
             switchProcess.isChecked = false
             return
         }
-        val outName = Utils.nameWithExt(etRename.text.toString(), selectedFormat, "merged")
-        val outFile = File(Utils.getOutputDir(), outName)
 
-        // Create concat list file
+        val outputDir = File(getExternalFilesDir(null), "output")
+        if (!outputDir.exists()) outputDir.mkdirs()
+
+        val outName = Utils.nameWithExt(
+            etRename.text.toString(),
+            selectedFormat,
+            "merged"
+        )
+
+        val outFile = File(outputDir, outName)
+
+        // 🔥 FIX: concat file robusto
         val listFile = File(cacheDir, "concat_list.txt")
-        listFile.writeText("file '${f1}'\nfile '${f2}'\n")
 
-        val cmd = "-f concat -safe 0 -i \"${listFile.absolutePath}\" -c copy \"${outFile.absolutePath}\""
+        val safeF1 = f1.replace("'", "\\'")
+        val safeF2 = f2.replace("'", "\\'")
+
+        listFile.writeText(
+            "file '$safeF1'\nfile '$safeF2'\n"
+        )
+
+        // 🔥 FIX: re-encode invece di copy (più compatibile)
+        val cmd = "-f concat -safe 0 -i \"${listFile.absolutePath}\" -c:v libx264 -c:a aac \"${outFile.absolutePath}\""
 
         runFFmpeg(cmd, tvProgress, tvStatus, switchProcess) { success ->
-            if (success) Utils.appendLog(this, "Output: ${outFile.absolutePath}")
+            if (success) {
+                Utils.appendLog(this, "Output: ${outFile.absolutePath}")
+            }
         }
     }
 }
