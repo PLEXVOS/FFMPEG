@@ -3,13 +3,12 @@ package com.exe.ffmpeg
 import android.app.AlertDialog
 import android.content.Intent
 import android.net.Uri
-import android.widget.FrameLayout
-import android.widget.Switch
-import android.widget.TextView
-import android.widget.Toast
+import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import com.arthenica.ffmpegkit.FFmpegKit
 import com.arthenica.ffmpegkit.ReturnCode
+import java.io.File
+import java.io.FileOutputStream
 
 abstract class BaseActivity : AppCompatActivity() {
 
@@ -41,9 +40,7 @@ abstract class BaseActivity : AppCompatActivity() {
 
     protected fun setupSwitch(switch: Switch, onStart: () -> Unit) {
         switch.setOnCheckedChangeListener { _, isChecked ->
-            if (isChecked) {
-                onStart()
-            }
+            if (isChecked) onStart()
         }
     }
 
@@ -66,38 +63,61 @@ abstract class BaseActivity : AppCompatActivity() {
 
         FFmpegKit.executeAsync(cmd, { session ->
             val success = ReturnCode.isSuccess(session.returnCode)
-            val msg = if (success) "Completato" else "Errore: ${session.failStackTrace?.take(100)}"
+            val msg = if (success) {
+                "Completato"
+            } else {
+                session.allLogsAsString
+            }
+
             Utils.appendLog(this, msg)
+
             runOnUiThread {
                 tvProgress.text = if (success) "100%" else "ERR"
-                tvStatus.text = msg
+                tvStatus.text = msg.take(100)
                 switch.isChecked = false
                 Toast.makeText(this, if (success) "Completato!" else "Errore", Toast.LENGTH_LONG).show()
             }
+
             onDone(success)
+
         }, { log ->
             val line = log.message ?: ""
-            // Parse progress from FFmpeg output
             if (line.contains("time=")) {
                 runOnUiThread { tvStatus.text = line.take(60) }
             }
         }, null)
     }
 
+    private fun copyUriToFile(uri: Uri): String {
+        val inputStream = contentResolver.openInputStream(uri)
+        val file = File(getExternalFilesDir(null), "input_${System.currentTimeMillis()}")
+        val outputStream = FileOutputStream(file)
+
+        inputStream?.copyTo(outputStream)
+
+        inputStream?.close()
+        outputStream.close()
+
+        return file.absolutePath
+    }
+
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
+
         if (resultCode == RESULT_OK && data?.data != null) {
             val uri = data.data!!
-            val path = Utils.getRealPath(this, uri)
+
+            val realPath = copyUriToFile(uri)
             val name = Utils.getFileNameFromUri(this, uri)
+
             when (requestCode) {
                 REQUEST_FILE1 -> {
-                    selectedFile1 = path
-                    onFile1Selected(name, path)
+                    selectedFile1 = realPath
+                    onFile1Selected(name, realPath)
                 }
                 REQUEST_FILE2 -> {
-                    selectedFile2 = path
-                    onFile2Selected(name, path)
+                    selectedFile2 = realPath
+                    onFile2Selected(name, realPath)
                 }
             }
         }
