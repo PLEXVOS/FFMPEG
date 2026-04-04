@@ -8,9 +8,6 @@ import android.widget.Switch
 import android.widget.TextView
 import android.widget.Toast
 import java.io.File
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 class MergeActivity : BaseActivity() {
 
@@ -59,42 +56,31 @@ class MergeActivity : BaseActivity() {
     private fun startMerge() {
         val f1 = selectedFile1
         val f2 = selectedFile2
-
-        if (f1.isNullOrEmpty() || f2.isNullOrEmpty()) {
+        if (f1 == null || f2 == null) {
             Toast.makeText(this, "Seleziona entrambi i file", Toast.LENGTH_SHORT).show()
             switchProcess.isChecked = false
             return
         }
 
-        val outputDir = Utils.getOutputDir()
+        val outputDir = getExternalFilesDir("FFmpegOutput") ?: filesDir
         if (!outputDir.exists()) outputDir.mkdirs()
-
         val outName = Utils.nameWithExt(etRename.text.toString(), selectedFormat, "merged")
         val outFile = File(outputDir, outName)
 
-        // File temporaneo con lista per FFmpeg
+        // Create concat list file
         val listFile = File(cacheDir, "concat_list.txt")
         listFile.writeText("file '${f1}'\nfile '${f2}'\n")
 
         val cmd = "-f concat -safe 0 -i \"${listFile.absolutePath}\" -c copy \"${outFile.absolutePath}\""
 
-        // Log su file nella cartella di output
-        val logFile = File(outputDir, "merge_log_${timestamp()}.txt")
-        logFile.writeText("CMD: $cmd\n\n")
-
         runFFmpeg(cmd, tvProgress, tvStatus, switchProcess) { success ->
-            val msg = if (success) {
-                "Merge completato: ${outFile.absolutePath}"
+            if (success) {
+                Utils.appendLog(this, "Output creato: ${outFile.absolutePath}")
+                Toast.makeText(this, "Merge completato!\nOutput: ${outFile.absolutePath}", Toast.LENGTH_LONG).show()
             } else {
-                "Errore durante il merge"
+                Utils.appendLog(this, "Merge fallito: verifica permessi o formato file")
+                Toast.makeText(this, "Errore durante merge, controlla log", Toast.LENGTH_LONG).show()
             }
-
-            Utils.appendLog(this, msg)
-            logFile.appendText("$msg\n")
         }
-    }
-
-    private fun timestamp(): String {
-        return SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
     }
 }
