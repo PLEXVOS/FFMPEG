@@ -2,6 +2,7 @@ package com.exe.ffmpeg
 
 import android.content.Context
 import android.net.Uri
+import android.os.Environment
 import android.provider.OpenableColumns
 import android.util.Log
 import java.io.File
@@ -15,10 +16,22 @@ object Utils {
     private const val KEY_LOG = "log_content"
 
     fun getOutputDir(context: Context): File {
-        val dir = File(context.getExternalFilesDir(null), "FFmpegOutput")
+        // Salva in /storage/emulated/0/Movies/FFmpegOutput/
+        // Visibile da qualsiasi file manager
+        val dir = File(
+            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES),
+            "FFmpegOutput"
+        )
         if (!dir.exists()) {
             val success = dir.mkdirs()
             Log.d("FFmpegLog", "Creazione cartella output: ${dir.absolutePath} success=$success")
+        }
+        // Fallback alla cartella privata se la pubblica non è accessibile
+        if (!dir.exists()) {
+            val fallback = File(context.getExternalFilesDir(null), "FFmpegOutput")
+            fallback.mkdirs()
+            Log.d("FFmpegLog", "Fallback cartella privata: ${fallback.absolutePath}")
+            return fallback
         }
         return dir
     }
