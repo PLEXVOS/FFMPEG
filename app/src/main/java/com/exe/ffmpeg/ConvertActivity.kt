@@ -23,6 +23,7 @@ class ConvertActivity : BaseActivity() {
         tvFormat = findViewById(R.id.tvFormat)
         etRename = findViewById(R.id.etRename)
         switchProcess = findViewById(R.id.switchProcess)
+
         selectedFormat = ".mp4"
 
         findViewById<Button>(R.id.btnFile1).setOnClickListener { pickFile(REQUEST_FILE1) }
@@ -42,7 +43,7 @@ class ConvertActivity : BaseActivity() {
         }
         val outName = Utils.nameWithExt(etRename.text.toString(), selectedFormat,
             File(f1).nameWithoutExtension + "_conv")
-        val outFile = File(Utils.getOutputDir(), outName)
+        val outFile = File(Utils.getOutputDir(this), outName)
         val cmd = "-i \"$f1\" \"${outFile.absolutePath}\""
         runFFmpeg(cmd, tvProgress, tvStatus, switchProcess) {}
     }
