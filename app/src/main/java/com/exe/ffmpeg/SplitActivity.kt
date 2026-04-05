@@ -58,6 +58,7 @@ class SplitActivity : BaseActivity() {
 
         val partsStr = if (spinnerParts.selectedItem.toString() == "Personalizzato")
             etCustomParts.text.toString() else spinnerParts.selectedItem.toString()
+
         val n = partsStr.toIntOrNull()
         if (n == null || n < 2) {
             Toast.makeText(this, "Numero parti non valido", Toast.LENGTH_SHORT).show()
@@ -70,6 +71,7 @@ class SplitActivity : BaseActivity() {
         Thread {
             val probe = FFprobeKit.getMediaInformation(f1)
             val duration = probe.mediaInformation?.duration?.toDoubleOrNull() ?: 0.0
+
             if (duration <= 0.0) {
                 runOnUiThread {
                     tvStatus.text = "Impossibile leggere durata"
@@ -80,10 +82,10 @@ class SplitActivity : BaseActivity() {
 
             val segDuration = duration / n
             val prefix = etRename.text.toString().ifBlank { "parte" }
-            val outDir = Utils.getOutputDir()
+            val outDir = Utils.getOutputDir(this)
             val ext = File(f1).extension.let { if (it.isNotBlank()) ".$it" else ".mp4" }
-            var completed = 0
 
+            var completed = 0
             for (i in 0 until n) {
                 val start = i * segDuration
                 val output = File(outDir, "${prefix}_${i + 1}$ext").absolutePath
