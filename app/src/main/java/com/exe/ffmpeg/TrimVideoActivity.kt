@@ -32,7 +32,10 @@ class TrimVideoActivity : BaseActivity() {
 
         findViewById<Button>(R.id.btnFile1).setOnClickListener { pickFile(REQUEST_FILE1) }
         findViewById<Button>(R.id.btnBack).setOnClickListener { finish() }
-        setupFormatDial(findViewById(R.id.dialFormat), tvFormat, resources.getStringArray(R.array.video_formats))
+        setupFormatDial(
+            findViewById(R.id.dialFormat), tvFormat,
+            resources.getStringArray(R.array.video_formats)
+        )
         setupSwitch(switchProcess) { startTrim() }
     }
 
@@ -48,7 +51,7 @@ class TrimVideoActivity : BaseActivity() {
         val start = etStart.text.toString().ifBlank { "00:00:00" }
         val end = etEnd.text.toString().ifBlank { "00:01:00" }
         val outName = Utils.nameWithExt(etRename.text.toString(), selectedFormat, "trimmed")
-        val outFile = File(Utils.getOutputDir(this), outName)
+        val outFile = File(Utils.getOutputDir(this, "Tagliati"), outName)
         val cmd = "-ss $start -to $end -i \"$f1\" -c copy \"${outFile.absolutePath}\""
         runFFmpeg(cmd, tvProgress, tvStatus, switchProcess) {}
     }
