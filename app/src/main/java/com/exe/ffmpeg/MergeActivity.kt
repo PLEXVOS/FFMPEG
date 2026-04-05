@@ -25,7 +25,6 @@ class MergeActivity : BaseActivity() {
         etRename = findViewById(R.id.etRename)
         switchProcess = findViewById(R.id.switchProcess)
 
-        // Ripristina i nomi file se l'Activity era stata ricreata
         if (selectedFile1 != null) tvFile1.text = File(selectedFile1!!).name
         if (selectedFile2 != null) tvFile2.text = File(selectedFile2!!).name
 
@@ -39,20 +38,35 @@ class MergeActivity : BaseActivity() {
     override fun onFile1Selected(name: String, path: String?) { tvFile1.text = name }
     override fun onFile2Selected(name: String, path: String?) { tvFile2.text = name }
 
+    private fun step(msg: String) {
+        Utils.appendLog(this, msg) // sincrono grazie al .commit() in Utils
+        runOnUiThread { tvStatus.text = msg }
+    }
+
     private fun startMerge() {
+        step("S1: startMerge avviata")
+
         val f1 = selectedFile1
         val f2 = selectedFile2
 
+        step("S2: f1=${if(f1==null)"NULL" else "OK"} f2=${if(f2==null)"NULL" else "OK"}")
+
         if (f1 == null || f2 == null) {
-            Toast.makeText(this, "Seleziona entrambi i file prima di procedere", Toast.LENGTH_LONG).show()
+            step("S2-STOP: file null")
             switchProcess.isChecked = false
             return
         }
 
-        // AGGIUNTO: try-catch per esporre qualsiasi eccezione nascosta
         try {
-            // FIX: passa context a getOutputDir
+            step("S3: getOutputDir...")
             val outputDir = Utils.getOutputDir(this)
+            step("S3-OK: ${outputDir.absolutePath}")
+
+            step("S4: controllo file input...")
+            val f1ok = File(f1).exists()
+            val f2ok = File(f2).exists()
+            step("S4: f1.exists=$f1ok f2.exists=$f2ok size1=${File(f1).length()} size2=${File(f2).length()}")
+
             val outName = Utils.nameWithExt(
                 etRename.text.toString(), ".mp4",
                 "merged_${System.currentTimeMillis()}"
@@ -61,35 +75,25 @@ class MergeActivity : BaseActivity() {
 
             val listFile = File(cacheDir, "merge_list_${System.currentTimeMillis()}.txt")
             listFile.writeText("file '${f1}'\nfile '${f2}'")
+            step("S5: listFile scritto OK")
 
             val cmd = "-y -f concat -safe 0 -i \"${listFile.absolutePath}\" -c copy \"${outFile.absolutePath}\""
-
-            Utils.appendLog(this, "Merge avviato: $cmd")
-            Utils.appendLog(this, "Output dir esiste: ${outputDir.exists()} | path: ${outputDir.absolutePath}")
-            Utils.appendLog(this, "File1 esiste: ${File(f1).exists()} size: ${File(f1).length()}")
-            Utils.appendLog(this, "File2 esiste: ${File(f2).exists()} size: ${File(f2).length()}")
+            step("S6: avvio FFmpegKit...")
 
             runFFmpeg(cmd, tvProgress, tvStatus, switchProcess) { success ->
                 if (success) {
-                    MediaScannerConnection.scanFile(
-                        this, arrayOf(outFile.absolutePath), null, null
-                    )
-                    runOnUiThread {
-                        Toast.makeText(
-                            this,
-                            "Fatto! File: ${outFile.name}\nCartella: ${outputDir.absolutePath}",
-                            Toast.LENGTH_LONG
-                        ).show()
-                    }
+                    MediaScannerConnection.scanFile(this, arrayOf(outFile.absolutePath), null, null)
+                    step("S7-OK: file creato ${outFile.name}")
+                } else {
+                    step("S7-FAIL: FFmpeg fallito - vedi log completo")
                 }
-                // Pulizia file temporaneo lista
                 listFile.delete()
             }
 
-        } catch (e: Exception) {
-            Utils.appendLog(this, "ECCEZIONE in startMerge: ${e::class.simpleName}: ${e.message}")
+        } catch (t: Throwable) {
+            val msg = "CRASH ${t::class.simpleName}: ${t.message}"
+            step(msg)
             switchProcess.isChecked = false
-            Toast.makeText(this, "Errore: ${e.message}", Toast.LENGTH_LONG).show()
         }
     }
 }
