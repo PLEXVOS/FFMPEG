@@ -19,17 +19,16 @@ abstract class BaseActivity : AppCompatActivity() {
     protected val REQUEST_FILE1 = 101
     protected val REQUEST_FILE2 = 102
 
-    // CHIAVE: salva i path selezionati attraverso i lifecycle events
     companion object {
-        private const val KEY_FILE1 = "key_selected_file1"
-        private const val KEY_FILE2 = "key_selected_file2"
-        private const val KEY_FORMAT = "key_selected_format"
+        private const val KEY_FILE1 = "key_file1"
+        private const val KEY_FILE2 = "key_file2"
+        private const val KEY_FORMAT = "key_format"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // RIMOSSO: checkStoragePermissions() - lo gestisce solo MainActivity
-        // AGGIUNTO: ripristino dei file selezionati dopo ricreazione Activity
+        // NESSUNA chiamata a checkStoragePermissions qui
+        // I permessi vengono gestiti solo da MainActivity
         if (savedInstanceState != null) {
             selectedFile1 = savedInstanceState.getString(KEY_FILE1)
             selectedFile2 = savedInstanceState.getString(KEY_FILE2)
@@ -37,7 +36,6 @@ abstract class BaseActivity : AppCompatActivity() {
         }
     }
 
-    // AGGIUNTO: salva i file selezionati prima che Android distrugga l'Activity
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         outState.putString(KEY_FILE1, selectedFile1)
@@ -45,7 +43,11 @@ abstract class BaseActivity : AppCompatActivity() {
         outState.putString(KEY_FORMAT, selectedFormat)
     }
 
-    protected fun setupFormatDial(dialFormat: FrameLayout, tvFormat: TextView, formats: Array<String>) {
+    protected fun setupFormatDial(
+        dialFormat: FrameLayout,
+        tvFormat: TextView,
+        formats: Array<String>
+    ) {
         dialFormat.setOnClickListener {
             AlertDialog.Builder(this)
                 .setTitle("Seleziona formato")
@@ -68,7 +70,10 @@ abstract class BaseActivity : AppCompatActivity() {
             type = "*/*"
             addCategory(Intent.CATEGORY_OPENABLE)
         }
-        startActivityForResult(Intent.createChooser(intent, "Seleziona File"), requestCode)
+        startActivityForResult(
+            Intent.createChooser(intent, "Seleziona File"),
+            requestCode
+        )
     }
 
     protected fun runFFmpeg(
@@ -86,20 +91,20 @@ abstract class BaseActivity : AppCompatActivity() {
         FFmpegKit.executeAsync(cmd, { session ->
             val success = ReturnCode.isSuccess(session.returnCode)
             val logs = session.allLogsAsString?.take(500) ?: "nessun log"
-            Utils.appendLog(this, if (success) "SUCCESS" else "ERROR: $logs")
-
+            Utils.appendLog(
+                this,
+                if (success) "SUCCESS" else "ERROR: $logs"
+            )
             runOnUiThread {
                 switch.isChecked = false
                 tvProgress.text = if (success) "100%" else "ERRORE"
-                tvStatus.text = if (success) "Terminato" else "Fallito: controlla LOG"
+                tvStatus.text = if (success) "Terminato" else "Fallito"
             }
-
-            // FIX: onDone chiamata sul main thread per evitare crash su view
             runOnUiThread { onDone(success) }
 
         }, { log ->
             if (log.message.contains("time=")) {
-                runOnUiThread { tvStatus.text = "Elaborazione in corso..." }
+                runOnUiThread { tvStatus.text = "Elaborazione..." }
             }
         }, null)
     }
@@ -112,7 +117,7 @@ abstract class BaseActivity : AppCompatActivity() {
             }
             file.absolutePath
         } catch (e: Exception) {
-            Utils.appendLog(this, "copyUriToInternal ERROR: ${e.message}")
+            Utils.appendLog(this, "Errore copia URI: ${e.message}")
             null
         }
     }
