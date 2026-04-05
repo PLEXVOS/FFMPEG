@@ -28,42 +28,25 @@ class ExtractAudioActivity : BaseActivity() {
 
         findViewById<Button>(R.id.btnFile1).setOnClickListener { pickFile(REQUEST_FILE1) }
         findViewById<Button>(R.id.btnBack).setOnClickListener { finish() }
-
         setupFormatDial(
-            findViewById(R.id.dialFormat),
-            tvFormat,
+            findViewById(R.id.dialFormat), tvFormat,
             resources.getStringArray(R.array.audio_formats)
         )
-
         setupSwitch(switchProcess) { startExtract() }
     }
 
-    override fun onFile1Selected(name: String, path: String?) {
-        tvFile1.text = name
-    }
+    override fun onFile1Selected(name: String, path: String?) { tvFile1.text = name }
 
     private fun startExtract() {
         val f1 = selectedFile1
-
         if (f1 == null) {
             Toast.makeText(this, "Seleziona un file", Toast.LENGTH_SHORT).show()
             switchProcess.isChecked = false
             return
         }
-
-        val outputDir = File(getExternalFilesDir(null), "output")
-        if (!outputDir.exists()) outputDir.mkdirs()
-
-        val outName = Utils.nameWithExt(
-            etRename.text.toString(),
-            selectedFormat,
-            "audio"
-        )
-
-        val outFile = File(outputDir, outName)
-
+        val outName = Utils.nameWithExt(etRename.text.toString(), selectedFormat, "audio")
+        val outFile = File(Utils.getOutputDir(this, "Audio"), outName)
         val cmd = "-i \"$f1\" -vn -acodec libmp3lame -q:a 2 \"${outFile.absolutePath}\""
-
         runFFmpeg(cmd, tvProgress, tvStatus, switchProcess) {}
     }
 }
