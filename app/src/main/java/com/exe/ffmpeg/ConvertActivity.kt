@@ -28,7 +28,10 @@ class ConvertActivity : BaseActivity() {
 
         findViewById<Button>(R.id.btnFile1).setOnClickListener { pickFile(REQUEST_FILE1) }
         findViewById<Button>(R.id.btnBack).setOnClickListener { finish() }
-        setupFormatDial(findViewById(R.id.dialFormat), tvFormat, resources.getStringArray(R.array.all_formats))
+        setupFormatDial(
+            findViewById(R.id.dialFormat), tvFormat,
+            resources.getStringArray(R.array.all_formats)
+        )
         setupSwitch(switchProcess) { startConvert() }
     }
 
@@ -41,9 +44,11 @@ class ConvertActivity : BaseActivity() {
             switchProcess.isChecked = false
             return
         }
-        val outName = Utils.nameWithExt(etRename.text.toString(), selectedFormat,
-            File(f1).nameWithoutExtension + "_conv")
-        val outFile = File(Utils.getOutputDir(this), outName)
+        val outName = Utils.nameWithExt(
+            etRename.text.toString(), selectedFormat,
+            File(f1).nameWithoutExtension + "_conv"
+        )
+        val outFile = File(Utils.getOutputDir(this, "Convertiti"), outName)
         val cmd = "-i \"$f1\" \"${outFile.absolutePath}\""
         runFFmpeg(cmd, tvProgress, tvStatus, switchProcess) {}
     }
