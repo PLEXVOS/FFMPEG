@@ -14,9 +14,6 @@ object Utils {
     private const val PREFS = "ffmpeg_log"
     private const val KEY_LOG = "log_content"
 
-    // FIX: usa getExternalFilesDir - sempre scrivibile su Android 10+
-    // senza bisogno di MANAGE_EXTERNAL_STORAGE o WRITE_EXTERNAL_STORAGE
-    // Path risultante: /Android/data/com.exe.ffmpeg/files/FFmpegOutput/
     fun getOutputDir(context: Context): File {
         val dir = File(context.getExternalFilesDir(null), "FFmpegOutput")
         if (!dir.exists()) {
@@ -44,7 +41,7 @@ object Utils {
         val ts = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
         val existing = prefs.getString(KEY_LOG, "") ?: ""
         val updated = "[$ts] $msg\n$existing"
-        prefs.edit().putString(KEY_LOG, updated.take(15000)).apply()
+        prefs.edit().putString(KEY_LOG, updated.take(15000)).commit()
         Log.d("FFmpegLog", "[$ts] $msg")
     }
 
