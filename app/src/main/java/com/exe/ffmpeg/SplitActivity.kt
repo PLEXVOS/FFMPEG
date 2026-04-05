@@ -3,7 +3,9 @@ package com.exe.ffmpeg
 import android.os.Bundle
 import android.view.View
 import android.widget.*
+import com.arthenica.ffmpegkit.FFmpegKit
 import com.arthenica.ffmpegkit.FFprobeKit
+import com.arthenica.ffmpegkit.ReturnCode
 import java.io.File
 
 class SplitActivity : BaseActivity() {
@@ -48,6 +50,7 @@ class SplitActivity : BaseActivity() {
 
     override fun onFile1Selected(name: String, path: String?) {
         tvFile1.text = name
+        // Pre-compila il prefisso con il nome del file senza estensione
         if (etRename.text.isBlank() && path != null) {
             etRename.setText(File(path).nameWithoutExtension)
         }
@@ -73,6 +76,7 @@ class SplitActivity : BaseActivity() {
             return
         }
 
+        // Prefisso: usa etRename (giÃ  pre-compilato con nome file), o fallback
         val prefisso = etRename.text.toString().ifBlank {
             File(f1).nameWithoutExtension
         }
@@ -95,60 +99,38 @@ class SplitActivity : BaseActivity() {
             val outDir = Utils.getOutputDir(this, "Divisi")
             val ext = File(f1).extension.let { if (it.isNotBlank()) ".$it" else ".mp4" }
 
+            var completati = 0
+
+            for (i in 0 until n) {
+                val start = i * segDuration
+                // Es: "Hulk_Parte_1.mp4", "Hulk_Parte_2.mp4"
+                val nomeOutput = "${prefisso}_Parte_${i + 1}$ext"
+                val output = File(outDir, nomeOutput).absolutePath
+                val cmd = "-ss $start -t $segDuration -i \"$f1\" -c copy \"$output\""
+
+                runOnUiThread {
+                    tvProgress.text = "${(i * 100 / n)}%"
+                    tvStatus.text = "Parte ${i + 1}/$n: $nomeOutput"
+                }
+
+                val session = FFmpegKit.execute(cmd)
+                if (ReturnCode.isSuccess(session.returnCode)) completati++
+            }
+
             runOnUiThread {
-                Utils.appendLog(this, "Split $n parti → $prefisso")
-                processSegment(0, n, f1, segDuration, prefisso, outDir, ext, 0)
+                tvProgress.text = "100%"
+                tvStatus.text = "Completato: $completati/$n parti"
+                switchProcess.isChecked = false
+                Utils.appendLog(
+                    this,
+                    "Split $n parti '$prefisso' â†’ ${outDir.absolutePath}"
+                )
+                Toast.makeText(
+                    this,
+                    "Fatto! $completati parti in Movies/FFmpegOutput/Divisi/",
+                    Toast.LENGTH_LONG
+                ).show()
             }
         }.start()
-    }
-
-    private fun processSegment(
-        index: Int,
-        n: Int,
-        f1: String,
-        segDuration: Double,
-        prefisso: String,
-        outDir: File,
-        ext: String,
-        completati: Int
-    ) {
-        if (index >= n) {
-            tvProgress.text = "100%"
-            tvStatus.text = "Completato: $completati/$n parti"
-            switchProcess.isChecked = false
-
-            Toast.makeText(
-                this,
-                "Fatto! $completati parti in Movies/FFmpegOutput/Divisi/",
-                Toast.LENGTH_LONG
-            ).show()
-
-            return
-        }
-
-        val start = index * segDuration
-        val nomeOutput = "${prefisso}_Parte_${index + 1}$ext"
-        val output = File(outDir, nomeOutput)
-
-        val cmd = "-ss $start -t $segDuration -i \"$f1\" -c copy \"${output.absolutePath}\""
-
-        tvProgress.text = "${(index * 100 / n)}%"
-        tvStatus.text = "Parte ${index + 1}/$n"
-
-        runFFmpeg(cmd, tvProgress, tvStatus, switchProcess) { success ->
-
-            val nuoviCompletati = if (success) completati + 1 else completati
-
-            processSegment(
-                index + 1,
-                n,
-                f1,
-                segDuration,
-                prefisso,
-                outDir,
-                ext,
-                nuoviCompletati
-            )
-        }
     }
 }
