@@ -15,22 +15,25 @@ object Utils {
     private const val PREFS = "ffmpeg_log"
     private const val KEY_LOG = "log_content"
 
-    fun getOutputDir(context: Context): File {
-        // Salva in /storage/emulated/0/Movies/FFmpegOutput/
-        // Visibile da qualsiasi file manager
-        val dir = File(
+    // subfolder vuoto = Movies/FFmpegOutput/
+    // subfolder "Uniti" = Movies/FFmpegOutput/Uniti/
+    fun getOutputDir(context: Context, subfolder: String = ""): File {
+        val base = File(
             Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES),
             "FFmpegOutput"
         )
+        val dir = if (subfolder.isNotBlank()) File(base, subfolder) else base
         if (!dir.exists()) {
             val success = dir.mkdirs()
-            Log.d("FFmpegLog", "Creazione cartella output: ${dir.absolutePath} success=$success")
+            Log.d("FFmpegLog", "Cartella: ${dir.absolutePath} created=$success")
         }
-        // Fallback alla cartella privata se la pubblica non è accessibile
+        // Fallback cartella privata se storage pubblico non accessibile
         if (!dir.exists()) {
-            val fallback = File(context.getExternalFilesDir(null), "FFmpegOutput")
+            val fallback = File(
+                context.getExternalFilesDir(null),
+                if (subfolder.isNotBlank()) "FFmpegOutput/$subfolder" else "FFmpegOutput"
+            )
             fallback.mkdirs()
-            Log.d("FFmpegLog", "Fallback cartella privata: ${fallback.absolutePath}")
             return fallback
         }
         return dir
