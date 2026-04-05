@@ -1,7 +1,12 @@
 package com.exe.ffmpeg
 
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
 import android.widget.*
+import com.arthenica.ffmpegkit.FFmpegKit
+import com.arthenica.ffmpegkit.FFprobeKit
+import com.arthenica.ffmpegkit.ReturnCode
 import java.io.File
 
 class TrimAudioActivity : BaseActivity() {
@@ -30,13 +35,42 @@ class TrimAudioActivity : BaseActivity() {
 
         selectedFormat = ".mp3"
 
+        // Istruzioni modalità visibili in tvFormat
+        tvFormat.text = "TAGLIA: start=00:01:00 end=00:05:00\nDIVIDI: start=4 (numero parti)"
+
+        // Aggiorna status in tempo reale per mostrare la modalità attiva
+        etStart.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, st: Int, c: Int, a: Int) {}
+            override fun onTextChanged(s: CharSequence?, st: Int, b: Int, c: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                val txt = s?.toString()?.trim() ?: ""
+                tvStatus.text = when {
+                    txt.matches(Regex("\\d+")) && txt.toIntOrNull() != null ->
+                        "Modalità: DIVIDI IN ${txt} PARTI UGUALI"
+                    txt.isNotBlank() ->
+                        "Modalità: TAGLIA (inizio=$txt)"
+                    else ->
+                        "Inserisci orario (es. 00:01:00) o numero parti (es. 4)"
+                }
+            }
+        })
+
         findViewById<Button>(R.id.btnFile1).setOnClickListener { pickFile(REQUEST_FILE1) }
         findViewById<Button>(R.id.btnBack).setOnClickListener { finish() }
-        setupFormatDial(findViewById(R.id.dialFormat), tvFormat, resources.getStringArray(R.array.audio_formats))
+        setupFormatDial(
+            findViewById(R.id.dialFormat),
+            tvFormat,
+            resources.getStringArray(R.array.audio_formats)
+        )
         setupSwitch(switchProcess) { startTrim() }
     }
 
-    override fun onFile1Selected(name: String, path: String?) { tvFile1.text = name }
+    override fun onFile1Selected(name: String, path: String?) {
+        tvFile1.text = name
+        if (etRename.text.isBlank() && path != null) {
+            etRename.setText(File(path).nameWithoutExtension)
+        }
+    }
 
     private fun startTrim() {
         val f1 = selectedFile1
@@ -45,11 +79,89 @@ class TrimAudioActivity : BaseActivity() {
             switchProcess.isChecked = false
             return
         }
-        val start = etStart.text.toString().ifBlank { "00:00:00" }
+
+        val startText = etStart.text.toString().trim()
+
+        // MODALITÀ DIVIDI: etStart contiene un numero intero puro
+        if (startText.matches(Regex("\\d+")) && startText.toIntOrNull() != null) {
+            val n = startText.toInt()
+            if (n < 2) {
+                Toast.makeText(this, "Numero parti minimo: 2", Toast.LENGTH_SHORT).show()
+                switchProcess.isChecked = false
+                return
+            }
+            avviaModalitaDivisione(f1, n)
+            return
+        }
+
+        // MODALITÀ TAGLIA: comportamento originale
+        val start = if (startText.isBlank()) "00:00:00" else startText
         val end = etEnd.text.toString().ifBlank { "00:01:00" }
         val outName = Utils.nameWithExt(etRename.text.toString(), selectedFormat, "trimmed_audio")
-        val outFile = File(Utils.getOutputDir(this), outName)
+        val outFile = File(Utils.getOutputDir(this, "Audio"), outName)
         val cmd = "-ss $start -to $end -i \"$f1\" -c copy \"${outFile.absolutePath}\""
+        Utils.appendLog(this, "Taglia audio: $start → $end")
         runFFmpeg(cmd, tvProgress, tvStatus, switchProcess) {}
+    }
+
+    // ── Divisione in N parti uguali ───────────────────────────────────────────
+    private fun avviaModalitaDivisione(f1: String, n: Int) {
+        val prefisso = etRename.text.toString().ifBlank {
+            File(f1).nameWithoutExtension
+        }
+        tvStatus.text = "Lettura durata audio..."
+
+        Thread {
+            val probe = FFprobeKit.getMediaInformation(f1)
+            val duration = probe.mediaInformation?.duration?.toDoubleOrNull() ?: 0.0
+
+            if (duration <= 0.0) {
+                runOnUiThread {
+                    tvStatus.text = "Impossibile leggere durata"
+                    switchProcess.isChecked = false
+                }
+                return@Thread
+            }
+
+            val segDuration = duration / n
+            val outDir = Utils.getOutputDir(this, "Audio")
+            val ext = File(f1).extension.let { if (it.isNotBlank()) ".$it" else selectedFormat }
+
+            // Info durata per l'utente
+            val minPerParte = (segDuration / 60).toInt()
+            val secPerParte = (segDuration % 60).toInt()
+            runOnUiThread {
+                tvStatus.text = "Ogni parte: ${minPerParte}m ${secPerParte}s"
+            }
+
+            var completati = 0
+
+            for (i in 0 until n) {
+                val start = i * segDuration
+                val nomeOutput = "${prefisso}_Parte_${i + 1}$ext"
+                val output = File(outDir, nomeOutput).absolutePath
+                val cmd = "-ss $start -t $segDuration -i \"$f1\" -c copy \"$output\""
+
+                runOnUiThread {
+                    tvProgress.text = "${(i * 100 / n)}%"
+                    tvStatus.text = "Parte ${i + 1}/$n: $nomeOutput"
+                }
+
+                val session = FFmpegKit.execute(cmd)
+                if (ReturnCode.isSuccess(session.returnCode)) completati++
+            }
+
+            runOnUiThread {
+                tvProgress.text = "100%"
+                tvStatus.text = "Completato: $completati/$n parti"
+                switchProcess.isChecked = false
+                Utils.appendLog(this, "Split audio $n parti '$prefisso' → ${outDir.absolutePath}")
+                Toast.makeText(
+                    this,
+                    "Fatto! $completati parti in Movies/FFmpegOutput/Audio/",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }.start()
     }
 }
