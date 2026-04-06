@@ -7,6 +7,7 @@ import com.arthenica.ffmpegkit.FFmpegKit
 import com.arthenica.ffmpegkit.FFprobeKit
 import com.arthenica.ffmpegkit.ReturnCode
 import java.io.File
+import java.util.Locale
 
 class SplitActivity : BaseActivity() {
 
@@ -17,6 +18,9 @@ class SplitActivity : BaseActivity() {
     private var etCustomParts: EditText? = null
     private var spinnerParts: Spinner? = null
     private var switchProcess: Switch? = null
+
+    // Salva l'estensione originale quando il file viene selezionato
+    private var originalExtension: String = ".mp4"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -31,7 +35,7 @@ class SplitActivity : BaseActivity() {
             spinnerParts = findViewById(R.id.spinnerParts)
             switchProcess = findViewById(R.id.switchProcess)
 
-            Utils.appendLog(this, "SplitActivity: onCreate OK, tutti gli ID trovati")
+            Utils.appendLog(this, "SplitActivity: onCreate OK")
 
             val parts = resources.getStringArray(R.array.split_parts)
             spinnerParts?.adapter = ArrayAdapter(
@@ -54,15 +58,18 @@ class SplitActivity : BaseActivity() {
 
         } catch (t: Throwable) {
             Utils.appendLog(this, "CRASH SplitActivity onCreate: ${t::class.simpleName}: ${t.message}")
-            Toast.makeText(this, "Errore apertura: ${t.message}", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "Errore: ${t.message}", Toast.LENGTH_LONG).show()
             finish()
         }
     }
 
     override fun onFile1Selected(name: String, path: String?) {
         tvFile1?.text = name
-        if (etRename?.text.isNullOrBlank() && path != null) {
-            etRename?.setText(File(path).nameWithoutExtension)
+        // Salva l'estensione dal nome originale (es. "video.mp4" → ".mp4")
+        val ext = File(name).extension
+        originalExtension = if (ext.isNotBlank()) ".$ext" else ".mp4"
+        if (etRename?.text.isNullOrBlank()) {
+            etRename?.setText(File(name).nameWithoutExtension)
         }
     }
 
@@ -108,14 +115,14 @@ class SplitActivity : BaseActivity() {
 
                 val segDuration = duration / n
                 val outDir = Utils.getOutputDir(this, "Divisi")
-                val ext = File(f1).extension.let { if (it.isNotBlank()) ".$it" else ".mp4" }
                 var completati = 0
 
                 for (i in 0 until n) {
-                    // FIX: formattazione con punto decimale, non virgola
-                    val start = "%.3f".format(i * segDuration)
-                    val dur = "%.3f".format(segDuration)
-                    val nomeOutput = "${prefisso}_Parte_${i + 1}$ext"
+                    // FIX 1: Locale.US forza il punto decimale
+                    val start = String.format(Locale.US, "%.3f", i * segDuration)
+                    val dur = String.format(Locale.US, "%.3f", segDuration)
+                    // FIX 2: usa estensione originale, non quella del file cache
+                    val nomeOutput = "${prefisso}_Parte_${i + 1}$originalExtension"
                     val output = File(outDir, nomeOutput).absolutePath
                     val cmd = "-ss $start -t $dur -i \"$f1\" -c copy \"$output\""
 
@@ -129,7 +136,10 @@ class SplitActivity : BaseActivity() {
                     if (ReturnCode.isSuccess(session.returnCode)) {
                         completati++
                     } else {
-                        Utils.appendLog(this, "Split parte ${i+1} fallita: ${session.allLogsAsString?.take(200)}")
+                        Utils.appendLog(
+                            this,
+                            "Split parte ${i + 1} fallita: ${session.allLogsAsString?.take(200)}"
+                        )
                     }
                 }
 
