@@ -8,6 +8,7 @@ import com.arthenica.ffmpegkit.FFmpegKit
 import com.arthenica.ffmpegkit.FFprobeKit
 import com.arthenica.ffmpegkit.ReturnCode
 import java.io.File
+import java.util.Locale
 
 class TrimAudioActivity : BaseActivity() {
 
@@ -130,9 +131,11 @@ class TrimAudioActivity : BaseActivity() {
                 var completati = 0
 
                 for (i in 0 until n) {
-                    // FIX: punto decimale locale-safe
-                    val start = "%.3f".format(i * segDuration)
-                    val dur = "%.3f".format(segDuration)
+
+                    // FIX Locale.US
+                    val start = String.format(Locale.US, "%.3f", i * segDuration)
+                    val dur = String.format(Locale.US, "%.3f", segDuration)
+
                     val nomeOutput = "${prefisso}_Parte_${i + 1}$ext"
                     val output = File(outDir, nomeOutput).absolutePath
                     val cmd = "-ss $start -t $dur -i \"$f1\" -c copy \"$output\""
