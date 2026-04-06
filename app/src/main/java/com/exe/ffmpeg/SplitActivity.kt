@@ -74,19 +74,23 @@ class SplitActivity : BaseActivity() {
             return
         }
 
-        val partsStr = if (spinnerParts?.selectedItem.toString() == "Personalizzato")
-            etCustomParts?.text.toString()
+        val selectedItem = spinnerParts?.selectedItem?.toString() ?: ""
+        val partsStr = if (selectedItem == "Personalizzato")
+            etCustomParts?.text?.toString() ?: ""
         else
-            spinnerParts?.selectedItem.toString()
+            selectedItem
 
-        val n = partsStr?.toIntOrNull()
+        val n = partsStr.toIntOrNull()
         if (n == null || n < 2) {
             Toast.makeText(this, "Numero parti non valido (minimo 2)", Toast.LENGTH_SHORT).show()
             switchProcess?.isChecked = false
             return
         }
 
-        val prefisso = etRename?.text.toString().ifBlank { File(f1).nameWithoutExtension }
+        val prefisso = etRename?.text?.toString()?.ifBlank {
+            File(f1).nameWithoutExtension
+        } ?: File(f1).nameWithoutExtension
+
         tvStatus?.text = "Lettura durata..."
 
         Thread {
@@ -108,18 +112,25 @@ class SplitActivity : BaseActivity() {
                 var completati = 0
 
                 for (i in 0 until n) {
-                    val start = i * segDuration
+                    // FIX: formattazione con punto decimale, non virgola
+                    val start = "%.3f".format(i * segDuration)
+                    val dur = "%.3f".format(segDuration)
                     val nomeOutput = "${prefisso}_Parte_${i + 1}$ext"
                     val output = File(outDir, nomeOutput).absolutePath
-                    val cmd = "-ss $start -t $segDuration -i \"$f1\" -c copy \"$output\""
+                    val cmd = "-ss $start -t $dur -i \"$f1\" -c copy \"$output\""
 
                     runOnUiThread {
                         tvProgress?.text = "${(i * 100 / n)}%"
                         tvStatus?.text = "Parte ${i + 1}/$n"
                     }
 
+                    Utils.appendLog(this, "Split cmd: $cmd")
                     val session = FFmpegKit.execute(cmd)
-                    if (ReturnCode.isSuccess(session.returnCode)) completati++
+                    if (ReturnCode.isSuccess(session.returnCode)) {
+                        completati++
+                    } else {
+                        Utils.appendLog(this, "Split parte ${i+1} fallita: ${session.allLogsAsString?.take(200)}")
+                    }
                 }
 
                 runOnUiThread {
@@ -127,7 +138,11 @@ class SplitActivity : BaseActivity() {
                     tvStatus?.text = "Completato: $completati/$n parti"
                     switchProcess?.isChecked = false
                     Utils.appendLog(this, "Split OK: $completati/$n parti di '$prefisso'")
-                    Toast.makeText(this, "Fatto! $completati parti create", Toast.LENGTH_LONG).show()
+                    Toast.makeText(
+                        this,
+                        "Fatto! $completati/$n parti in Movies/FFmpegOutput/Divisi/",
+                        Toast.LENGTH_LONG
+                    ).show()
                 }
             } catch (t: Throwable) {
                 Utils.appendLog(this, "CRASH startSplit: ${t::class.simpleName}: ${t.message}")
@@ -137,5 +152,3 @@ class SplitActivity : BaseActivity() {
                 }
             }
         }.start()
-    }
-}
