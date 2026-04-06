@@ -21,6 +21,9 @@ class TrimAudioActivity : BaseActivity() {
     private lateinit var etEnd: EditText
     private lateinit var switchProcess: Switch
 
+    private var originalExtension: String = ".mp3"
+    private var originalName: String = ""
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_trim_audio)
@@ -42,12 +45,9 @@ class TrimAudioActivity : BaseActivity() {
             override fun afterTextChanged(s: Editable?) {
                 val txt = s?.toString()?.trim() ?: ""
                 tvStatus.text = when {
-                    txt.matches(Regex("\\d+")) ->
-                        "Modalità: DIVIDI IN $txt PARTI UGUALI"
-                    txt.isNotBlank() ->
-                        "Modalità: TAGLIA (inizio=$txt)"
-                    else ->
-                        "Inserisci orario (es. 00:01:00) o numero parti (es. 4)"
+                    txt.matches(Regex("\\d+")) -> "Modalità: DIVIDI IN $txt PARTI UGUALI"
+                    txt.isNotBlank() -> "Modalità: TAGLIA (inizio=$txt)"
+                    else -> "Inserisci orario (es. 00:01:00) o numero parti (es. 4)"
                 }
             }
         })
@@ -55,8 +55,7 @@ class TrimAudioActivity : BaseActivity() {
         findViewById<Button>(R.id.btnFile1).setOnClickListener { pickFile(REQUEST_FILE1) }
         findViewById<Button>(R.id.btnBack).setOnClickListener { finish() }
         setupFormatDial(
-            findViewById(R.id.dialFormat),
-            tvFormat,
+            findViewById(R.id.dialFormat), tvFormat,
             resources.getStringArray(R.array.audio_formats)
         )
         setupSwitch(switchProcess) { startTrim() }
@@ -64,8 +63,11 @@ class TrimAudioActivity : BaseActivity() {
 
     override fun onFile1Selected(name: String, path: String?) {
         tvFile1.text = name
-        if (etRename.text.isBlank() && path != null) {
-            etRename.setText(File(path).nameWithoutExtension)
+        originalName = File(name).nameWithoutExtension
+        val ext = File(name).extension
+        originalExtension = if (ext.isNotBlank()) ".$ext" else ".mp3"
+        if (etRename.text.isBlank()) {
+            etRename.setText(originalName)
         }
     }
 
@@ -100,9 +102,7 @@ class TrimAudioActivity : BaseActivity() {
     }
 
     private fun avviaModalitaDivisione(f1: String, n: Int) {
-        val prefisso = etRename.text.toString().ifBlank {
-            File(f1).nameWithoutExtension
-        }
+        val prefisso = etRename.text.toString().ifBlank { originalName.ifBlank { "audio" } }
         tvStatus.text = "Lettura durata audio..."
 
         Thread {
@@ -120,7 +120,6 @@ class TrimAudioActivity : BaseActivity() {
 
                 val segDuration = duration / n
                 val outDir = Utils.getOutputDir(this, "Audio")
-                val ext = File(f1).extension.let { if (it.isNotBlank()) ".$it" else selectedFormat }
                 val minPerParte = (segDuration / 60).toInt()
                 val secPerParte = (segDuration % 60).toInt()
 
@@ -131,12 +130,10 @@ class TrimAudioActivity : BaseActivity() {
                 var completati = 0
 
                 for (i in 0 until n) {
-
-                    // FIX Locale.US
                     val start = String.format(Locale.US, "%.3f", i * segDuration)
                     val dur = String.format(Locale.US, "%.3f", segDuration)
-
-                    val nomeOutput = "${prefisso}_Parte_${i + 1}$ext"
+                    // usa estensione originale, non quella del file cache
+                    val nomeOutput = "${prefisso}_Parte_${i + 1}$originalExtension"
                     val output = File(outDir, nomeOutput).absolutePath
                     val cmd = "-ss $start -t $dur -i \"$f1\" -c copy \"$output\""
 
@@ -147,6 +144,7 @@ class TrimAudioActivity : BaseActivity() {
 
                     val session = FFmpegKit.execute(cmd)
                     if (ReturnCode.isSuccess(session.returnCode)) completati++
+                    else Utils.appendLog(this, "Parte ${i+1} fallita: ${session.allLogsAsString?.take(100)}")
                 }
 
                 runOnUiThread {
