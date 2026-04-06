@@ -21,7 +21,15 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
         <activity android:name=".MergeActivity" android:exported="false" />
+        <activity android:name=".SplitActivity" android:exported="false" />
+        <activity android:name=".TrimVideoActivity" android:exported="false" />
+        <activity android:name=".TrimAudioActivity" android:exported="false" />
+        <activity android:name=".ExtractAudioActivity" android:exported="false" />
+        <activity android:name=".ConvertActivity" android:exported="false" />
         <activity android:name=".LogActivity" android:exported="false" />
-        </application>
+
+    </application>
+
 </manifest>
